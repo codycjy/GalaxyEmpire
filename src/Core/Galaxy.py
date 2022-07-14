@@ -1,6 +1,7 @@
 import logging
 import queue
 import asyncio
+from collections import defaultdict
 
 import requests
 
@@ -9,9 +10,10 @@ from src.Core.GalaxyCore import GalaxyCore
 class Galaxy(GalaxyCore):
     def __init__(self, username: str, password: str, server: str):
         super().__init__(username, password, server)
-        self.attackTargetList=[{'planet':6,'system':47,'galaxy':137}]
-
+        # self.attackTargetList=[{'planet':6,'system':47,'galaxy':137}]
         self.attackLevel=None
+        self.fleetOnPlanet=defaultdict(dict)
+        self.resourcesOnPlanet=defaultdict()
 
 
     def getTasks(self,attackTargetList,attackLevel,exploreTargetList,exploreLevel,taskEnabled):
@@ -66,9 +68,6 @@ class Galaxy(GalaxyCore):
                 __args.update({'token':result['data']['result']['token']})
             except KeyError:
                 pass
-            finally:
-                pass #TODO
-            pass
         else:
             raise Exception('Error while getAttackFleet')
         return __args
@@ -77,6 +76,7 @@ class Galaxy(GalaxyCore):
         url='game.php?page=fleet3'
         additional_args={'staytime':1}
 
+        __args={}
         try:
             __args=self.getAttackFleet(target,level)
         except Exception:
@@ -126,34 +126,67 @@ class Galaxy(GalaxyCore):
             await asyncio.sleep(sleepTime)
          
     async def asyncTaskGenerator(self):
-        attackTask=asyncio.create_task(self.addAttackTask())
-
-        print(2333,'\n\n\n')
         if self.isAttack:
+            attackTask=asyncio.create_task(self.addAttackTask())
             await attackTask
+        if self.isExplore:
+            exploreTask=asyncio.create_task(self.addExploreTask())
+            await exploreTask
+        if self.isEscaping:
+            escapeTask=asyncio.create_task(self.addEscapeTask())
+            await escapeTask
 
     def run(self):
         asyncio.run(self.asyncTaskGenerator())
 
     def showPlanetId(self):
+        self.updateBuildingInfo()
         for i in self.planet.items():
             print(i[0],end=' ')
-        pass        
 
     async def addEscapeTask(self):
         """Generates a new escape task"""
+        self.checkEnemy()
+        self.showPlanetId()
         pass
 
 
-    async def checkEnemy(self):
+    def updateResources(self,planetId):
+        """
+        update resources of planet
+        """
+        res=self.changePlanet(planetId)
+        for i in (res['result']['fleetInfo']['FleetsOnPlanet']):
+            if i['id']==503:
+                continue
+            self.fleetOnPlanet[planetId]['id']=i['id']
+            self.fleetOnPlanet[planetId]['count']=i['count']
+        logging.info(self.fleetOnPlanet)
+        pass
+
+
+    def checkEnemy(self):
         """
         check whethe there is enemy attacking us
         """
+
+        url="game.php?page=fleet&action=detected"
+        result = self._post(url)
+        logging.debug(result)
+        if result['status'] != 0:
+            return {'status':-1}
+        result=result['data']['result']
+        logging.info(result)
+
+    
+
+
 
     async def Escape(self,planetId):
         """
         escape from planet
         """
+        self.changePlanet(planetId)
         pass
 
 

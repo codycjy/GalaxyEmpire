@@ -5,7 +5,6 @@ import logging
 from collections import defaultdict
 
 import requests
-from requests.exceptions import JSONDecodeError
 
 
 salt = 'b6bd8a93c54cc404c80d5a6833ba12eb'
@@ -87,6 +86,7 @@ class GalaxyCore:
         """
         Everything work with network start in this method
         """
+
         extra_args ={}
         if "login" not in url:
             extra_args=self.getSession()
@@ -95,7 +95,7 @@ class GalaxyCore:
             url=self.serverUrlList[self.server]+url+addArgs(args)
         except KeyError:
             logging.warning("server wrong")
-            exit()
+            exit() #TODO change exit way with status code.
         logging.debug(url)
         try :
             req=requests.post(url,headers=headers,data=crypto(url))
@@ -122,23 +122,27 @@ class GalaxyCore:
         url=    f'index.php?page=gamelogin&ver=0.1&tz=7&'\
                 f'device_id=51dd0b0337f00c2e03c5bb110a56f818&device_name=OPPO&'\
                 f'username={self.username}&password={md5(self.password)}'
-        logging.debug("login" in url)
         result=self._post(url,{1:1})
         if result['status'] == 0:
             loginResult=result['data']
         else:
             return{'status':-1,'data':result['data']}
-        self.ppy_id=loginResult['ppy_id']
-        self.ssid=loginResult['ssid']
+        try:
+            self.ppy_id=loginResult['ppy_id']
+            self.ssid=loginResult['ssid']
+        except KeyError:
+            logging.warning("login failed")
+            return {'status':-1}
         logging.info("Success")
         return {'status':0}
 
-    def changePlanet(self, planetId):
+    def changePlanet(self, planetId)->dict:
         url = f'game.php?page=buildings&mode='
         args={"cp":planetId}
         
         logging.info('changePlanet: ' +str(planetId))
-        return json.loads(req.text)
+        result=self._post(url,args)
+        return result['data']
 
 
     def updateBuildingInfo(self):
@@ -151,7 +155,7 @@ class GalaxyCore:
             for i in buildInfo['result']['buildInfo']['result']['Planets'].items():
                 print(i)
                 self.planet[i[1]['id']]=i[1]
-            logging.info(self.planet)
+            # logging.info(self.planet)
 
         else:
             return{'status':-1,'data':result['data']}
