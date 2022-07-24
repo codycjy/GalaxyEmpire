@@ -10,7 +10,7 @@ EXPLORELEVEL = 99
 ATTACKTARGET = [[137,47,6]]
 ATTACKTIMES = 1 #
 ATTACKLEVEL = 20
-
+#TODO customize fleet
 
 attackTargetList=[]
 exploretargetList=[]

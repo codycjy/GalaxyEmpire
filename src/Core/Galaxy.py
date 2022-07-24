@@ -3,17 +3,22 @@ import queue
 import asyncio
 from collections import defaultdict
 
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+
 import requests
 
 from src.Core.GalaxyCore import GalaxyCore
+from src.Core.Planet import Planet
 
 class Galaxy(GalaxyCore):
     def __init__(self, username: str, password: str, server: str):
         super().__init__(username, password, server)
-        # self.attackTargetList=[{'planet':6,'system':47,'galaxy':137}]
         self.attackLevel=None
         self.fleetOnPlanet=defaultdict(dict)
         self.resourcesOnPlanet=defaultdict()
+        self.attackedPlanet=defaultdict(int)
+        self._planet={}
+        # get all the planet and initalize them
 
 
     def getTasks(self,attackTargetList,attackLevel,exploreTargetList,exploreLevel,taskEnabled):
@@ -32,6 +37,7 @@ class Galaxy(GalaxyCore):
         self.isExplore=taskEnabled['explore']
         self.isEscaping=taskEnabled['escape']
 
+
     def taskCore(self,task):
         """
         all task based on task Core func including relogin
@@ -39,7 +45,8 @@ class Galaxy(GalaxyCore):
         """
 
         if task['type'] == 0:
-            self.login()
+            self.relogin()
+            yield 0
         elif task['type'] == 1:
             waittime=30
             for _ in range(task['times']):
@@ -47,9 +54,24 @@ class Galaxy(GalaxyCore):
             yield waittime
                 
         elif task['type'] == 2:
-            yield 0  #TODO escape
-            pass
+            self.Escape(task['planetId'],task['enemyFleet'])
+            yield 0  
         
+    def relogin(self):
+        """
+        login and update
+        """
+        self.login()
+        self.updateBuildingInfo()
+
+    async def enableAutoLogin(self):
+        """
+        enable auto login
+        """
+        while True:
+            await asyncio.sleep(900)
+            result= next(self.taskCore({'type':0}))
+
     def getAttackFleet(self,target,level):
         url="game.php?page=my_fleet1"
         __args={}
@@ -95,6 +117,117 @@ class Galaxy(GalaxyCore):
         logging.info(isFailed)
         return {'status':-1,'waittime':waittime if not isFailed else 0} 
             
+    def updateBuildingInfo(self):
+        url="game.php?page=buildings"
+        result=self._post(url)
+        if result['status'] == 0:
+            buildInfo=result['data']
+            self.planet.clear()
+            for i in buildInfo['result']['buildInfo']['result']['Planets'].items():
+                planet=(i[1]['galaxy'],i[1]['system'],i[1]['planet'],i[1]['planet_type'])
+                self.planetIdDict[i[0]]=planet
+                self.planetIdDict[planet]=i[0]
+                planetInformation=self.getSession()
+                planetInformation.update({'server':self.server,'planetId':i[0],'position':planet})
+                self.planet[i[0]]=Planet(planetInformation)
+        else:
+            return{'status':-1,'data':result['data']}
+
+
+    def checkEnemy(self):
+        """
+        check whethe there is enemy attacking us
+        """
+
+        url="game.php?page=fleet&action=detected"
+        result = self._post(url)
+        logging.debug(result)
+        if result['status'] != 0:
+            return {'status':-1}
+        result=result['data']['result'] # attacking enemies
+        logging.info(result)
+        self.attackedPlanet.clear()
+        for i in result:
+            plannetId = None
+            target=(i['endGalaxy'],i['endSystem'],i['endPlanet'],i['endType'])
+            plannetId=self.planetIdDict[target]
+            if not plannetId:
+                logging.warning("wrong planet id")
+                continue
+            logging.info("enemy attacking us"+str(plannetId))
+            self.attackedPlanet[plannetId]=1
+            result=next(self.taskCore({'type':2,'planetId':plannetId,'enemyFleet':i['fleet']}))
+
+
+    def Escape(self,planetId:str,enemyFleet):
+        """
+        escape from planet
+        """
+        url='game.php?page=my_fleet1'
+        __args={} 
+        planet=self.planet[planetId]
+        planet.updateResources()
+        __args.update(planet.getFleet())
+        __args.update({'mission':4})
+        logging.info(enemyFleet)
+        target=None
+        for i in self.planet.items():
+            if(type(i[0])==tuple):continue
+            if i[0] not in self.attackedPlanet.keys() and i[0]!=planetId:
+                target=i[1].getInformation()[0]
+                break
+        if target: 
+            self.getEscapeFleet(planet,target)
+        # self.changePlanet(planetId)
+
+    def getEscapeFleet(self,planet,destination):
+        url="game.php?page=my_fleet1"
+        __args={}
+
+        target={'galaxy':destination[0],'system':destination[1],'planet':destination[2],'type':destination[3]}
+
+        __args.update(dict(zip(['type','mission','speed'],[1,4,1])))
+        __args.update(planet.getFleet())
+        __args.update(target)
+
+        logging.debug(__args)
+
+        res=self._post(url,__args) # get fleet information
+
+        print("\n\n",str(res),"\n\n")
+        __args.update({'token':res['data']['result']['token']})
+
+        if res['status']==0:
+            if res['data']['status'] =='error':return 
+            __args['token']=res['data']['result']['token']
+        space=res['data']['result']['fleetroom']
+        cost=res['data']['result']['consumption']
+
+        resource = planet.getResources()
+        availSpace = space - cost
+        if availSpace < 1 or space<1 :
+            return
+        deCost=min(availSpace,resource['deuterium']-cost)
+        __args.update({'deuterium':deCost})
+        __args.update({'metal':min(resource['metal'],(availSpace-deCost)//4*3)})
+        __args.update({'crystal':min(resource['crystal'],(availSpace-deCost)//4*1)})
+        url="game.php?page=fleet3"
+        res=self._post(url,__args) # send fleet
+        logging.info(res['data'])
+
+
+
+        logging.debug(__args)
+
+    async def Detect(self):
+        """
+        check if there is enemy attacking us
+        if there is, escape
+        """
+        while True :
+            self.checkEnemy()
+            await asyncio.sleep(60)
+
     async def addAttackTask(self):
         """Generates a new attack task"""
         task={}
@@ -106,7 +239,7 @@ class Galaxy(GalaxyCore):
             task['target']=target
             task['level'] = self.attackLevel
             task['type'] = 1
-            task['times'] = 1 # TODO  make times and level together
+            task['times'] = 1 
             logging.debug(task)
             sleepTime=next(self.taskCore(task))
             logging.info(f"attacking! waiting for {sleepTime} seconds")
@@ -120,7 +253,7 @@ class Galaxy(GalaxyCore):
             task['target']=target
             task['level'] = self.exploreLevel
             task['type'] = 1
-            task['times'] = 1 # TODO  make times and level together
+            task['times'] = 1 
             sleepTime=next(self.taskCore(task))
             logging.info(f"Exploring! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
@@ -138,56 +271,6 @@ class Galaxy(GalaxyCore):
 
     def run(self):
         asyncio.run(self.asyncTaskGenerator())
-
-    def showPlanetId(self):
-        self.updateBuildingInfo()
-        for i in self.planet.items():
-            print(i[0],end=' ')
-
-    async def addEscapeTask(self):
-        """Generates a new escape task"""
-        self.checkEnemy()
-        self.showPlanetId()
-        pass
-
-
-    def updateResources(self,planetId):
-        """
-        update resources of planet
-        """
-        res=self.changePlanet(planetId)
-        for i in (res['result']['fleetInfo']['FleetsOnPlanet']):
-            if i['id']==503:
-                continue
-            self.fleetOnPlanet[planetId]['id']=i['id']
-            self.fleetOnPlanet[planetId]['count']=i['count']
-        logging.info(self.fleetOnPlanet)
-        pass
-
-
-    def checkEnemy(self):
-        """
-        check whethe there is enemy attacking us
-        """
-
-        url="game.php?page=fleet&action=detected"
-        result = self._post(url)
-        logging.debug(result)
-        if result['status'] != 0:
-            return {'status':-1}
-        result=result['data']['result']
-        logging.info(result)
-
-    
-
-
-
-    async def Escape(self,planetId):
-        """
-        escape from planet
-        """
-        self.changePlanet(planetId)
-        pass
 
 
 

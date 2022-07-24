@@ -2,7 +2,9 @@ import hashlib
 import queue 
 import json
 import logging
+import sys
 from collections import defaultdict
+
 
 import requests
 
@@ -16,9 +18,8 @@ logging.basicConfig(level=logging.DEBUG,  # 控制台打印的日志级别
                     format=
                     '%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                     # 日志格式
-
                     )
-
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 def crypto(url, opt=''):
@@ -50,18 +51,7 @@ class GalaxyCore:
     ShipToID={  'ds':'ship214','de':'ship213','cargo':'ship203','bs':'ship207',
                 'satellite':'ship210'}
 
-
-    def __init__(self,username:str,password:str,server:str):
-        self.username = username
-        self.password = password
-        self.server=server
-        self.ppy_id=None
-        self.ssid =None
-        self.salt="b6bd8a93c54cc404c80d5a6833ba12eb"
-        self.fleet=defaultdict(dict)
-        self.planet={}
-        self.fleet[20]={'bs':50}# for test
-        self.serverUrlList = {
+    serverUrlList = {
             'ze': 'http://45.33.39.137/zadc/',
             'g1': 'http://45.33.44.248/yoox/',
             'g5': 'http://45.33.39.137/g5/',
@@ -78,11 +68,24 @@ class GalaxyCore:
             'g7': 'http://173.255.250.41/g7/',
             'g8': 'http://45.33.44.248/g8/',
             'g10': 'http://45.33.39.137/g10/'
-        }
+            }
+
+    salt="b6bd8a93c54cc404c80d5a6833ba12eb"
+
+    def __init__(self,username:str,password:str,server:str):
+        self.username = username
+        self.password = password
+        self.server=server
+        self.ppy_id=None
+        self.ssid =None
+        self.fleet=defaultdict(dict)
+        self.planetIdDict=defaultdict(str)
+        self.planet={}
+        self.fleet[20]={'bs':50}# for test
         
         self.login()
 
-    def _post(self,url:str,args:dict={}) :
+    def _post(self,url:str,args:dict={})  -> dict:
         """
         Everything work with network start in this method
         """
@@ -95,7 +98,7 @@ class GalaxyCore:
             url=self.serverUrlList[self.server]+url+addArgs(args)
         except KeyError:
             logging.warning("server wrong")
-            exit() #TODO change exit way with status code.
+            sys.exit(0)
         logging.debug(url)
         try :
             req=requests.post(url,headers=headers,data=crypto(url))
@@ -137,30 +140,15 @@ class GalaxyCore:
         return {'status':0}
 
     def changePlanet(self, planetId)->dict:
+        """
+        change planet and return planet information.
+        """
+
         url = f'game.php?page=buildings&mode='
         args={"cp":planetId}
-        
         logging.info('changePlanet: ' +str(planetId))
         result=self._post(url,args)
         return result['data']
-
-
-    def updateBuildingInfo(self):
-        url="game.php?page=buildings"
-        result=self._post(url)
-        if result['status'] == 0:
-            buildInfo=result['data']
-            self.planet.clear()
-            
-            for i in buildInfo['result']['buildInfo']['result']['Planets'].items():
-                print(i)
-                self.planet[i[1]['id']]=i[1]
-            # logging.info(self.planet)
-
-        else:
-            return{'status':-1,'data':result['data']}
-
-
 
 
 if __name__ == "__main__":
