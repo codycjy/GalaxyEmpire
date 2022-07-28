@@ -47,6 +47,34 @@ headers = {
 
 class GalaxyCore:
     
+    fleetLevel = {
+            20: defaultdict(int, {
+                'ds': 2,
+                'bs': 0,
+                'de': 0,
+                'cargo': 0
+                }),
+            25: defaultdict(int, {'ds': 10}),
+            10: defaultdict(int, {
+                'bs': 15,
+                'cargo': 15
+                }),
+            12: defaultdict(int, {
+                'bs': 40,
+                'cargo': 30
+                }),
+            16: defaultdict(int, {
+                'bs': 260,
+                'cargo': 35
+                }),
+            88: defaultdict(int, {
+                'cargo': 50,
+                'bs': 50,
+                'satellite': 200
+                }),
+            99: defaultdict(int, {'satellite': 2000})
+            }
+
 
     ShipToID={  'ds':'ship214','de':'ship213','cargo':'ship203','bs':'ship207',
                 'satellite':'ship210'}
@@ -81,9 +109,10 @@ class GalaxyCore:
         self.fleet=defaultdict(dict)
         self.planetIdDict=defaultdict(str)
         self.planet={}
-        self.fleet[20]={'bs':50}# for test
-        
         self.login()
+    
+
+
 
     def _post(self,url:str,args:dict={})  -> dict:
         """
@@ -152,7 +181,6 @@ class GalaxyCore:
 
 
 if __name__ == "__main__":
-    print('start')
     g=GalaxyCore('username','password','ze')
     g.login()
 

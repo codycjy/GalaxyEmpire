@@ -21,21 +21,22 @@ class Galaxy(GalaxyCore):
         # get all the planet and initalize them
 
 
-    def getTasks(self,attackTargetList,attackLevel,exploreTargetList,exploreLevel,taskEnabled):
+    def getTasks(self,attackTargetList,attackLevel,exploreTargetList,exploreLevel,taskEnabled,fleetLevel):
         self.attackLevel=attackLevel[0]
         self.attackTargetList=attackTargetList
         self.attackTimes=attackLevel[1]
 
 
         self.exploreLevel=exploreLevel[0]
-        self.exploreTargetList=exploreTargetList
+        self.exploreTargetList= exploreTargetList
         self.exploreTimes=exploreLevel[1]
-
 
 
         self.isAttack=taskEnabled['attack']
         self.isExplore=taskEnabled['explore']
         self.isEscaping=taskEnabled['escape']
+
+        self.fleetLevel=fleetLevel
 
 
     def taskCore(self,task):
@@ -76,7 +77,7 @@ class Galaxy(GalaxyCore):
         url="game.php?page=my_fleet1"
         __args={}
         __args.update(dict(zip(['type','mission'],[4,15] if 50<level<100 else [1,1])))
-        if not self.fleet[level]:
+        if not self.fleetLevel[level]:
             logging.warning("wrong task")
             return
         else:
@@ -191,10 +192,7 @@ class Galaxy(GalaxyCore):
         __args.update(target)
 
         logging.debug(__args)
-
         res=self._post(url,__args) # get fleet information
-
-        print("\n\n",str(res),"\n\n")
         __args.update({'token':res['data']['result']['token']})
 
         if res['status']==0:
@@ -214,8 +212,6 @@ class Galaxy(GalaxyCore):
         url="game.php?page=fleet3"
         res=self._post(url,__args) # send fleet
         logging.info(res['data'])
-
-
 
         logging.debug(__args)
 
@@ -266,7 +262,7 @@ class Galaxy(GalaxyCore):
             exploreTask=asyncio.create_task(self.addExploreTask())
             await exploreTask
         if self.isEscaping:
-            escapeTask=asyncio.create_task(self.addEscapeTask())
+            escapeTask=asyncio.create_task(self.Detect())
             await escapeTask
 
     def run(self):
