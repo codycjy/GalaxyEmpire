@@ -21,22 +21,24 @@ class Galaxy(GalaxyCore):
         # get all the planet and initalize them
 
 
-    def getTasks(self,attackTargetList,attackLevel,exploreTargetList,exploreLevel,taskEnabled,fleetLevel):
+    def getTasks(self,attackTargetList,attackLevel,exploreTargetList,exploreLevel,taskEnabled,fleetLevel=None):
         self.attackLevel=attackLevel[0]
         self.attackTargetList=attackTargetList
         self.attackTimes=attackLevel[1]
+        self.attackFrom=attackLevel[2]
 
 
         self.exploreLevel=exploreLevel[0]
         self.exploreTargetList= exploreTargetList
         self.exploreTimes=exploreLevel[1]
+        self.exploreFrom=self.planetIdDict[2]
 
 
         self.isAttack=taskEnabled['attack']
         self.isExplore=taskEnabled['explore']
         self.isEscaping=taskEnabled['escape']
 
-        self.fleetLevel=fleetLevel
+        self.fleetLevel=fleetLevel if fleetLevel is not None else self.fleetLevel
 
 
     def taskCore(self,task):
@@ -49,9 +51,10 @@ class Galaxy(GalaxyCore):
             self.relogin()
             yield 0
         elif task['type'] == 1:
-            waittime=30
+            waittime=0
+            self.changePlanet(task['from'])
             for _ in range(task['times']):
-                waittime=max(self.Attack(task['target'], task['level'])['waittime'],waittime)
+                waittime=max(self.Attack(task['target'], task['level'])['waittime'],waittime)+30
             yield waittime
                 
         elif task['type'] == 2:
@@ -98,7 +101,6 @@ class Galaxy(GalaxyCore):
     def Attack(self,target,level):
         url='game.php?page=fleet3'
         additional_args={'staytime':1}
-
         __args={}
         try:
             __args=self.getAttackFleet(target,level)
@@ -236,6 +238,7 @@ class Galaxy(GalaxyCore):
             task['level'] = self.attackLevel
             task['type'] = 1
             task['times'] = 1 
+            task['from'] = self.attackFrom
             logging.debug(task)
             sleepTime=next(self.taskCore(task))
             logging.info(f"attacking! waiting for {sleepTime} seconds")
@@ -250,6 +253,7 @@ class Galaxy(GalaxyCore):
             task['level'] = self.exploreLevel
             task['type'] = 1
             task['times'] = 1 
+            task['from'] = self.exploreFrom
             sleepTime=next(self.taskCore(task))
             logging.info(f"Exploring! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
