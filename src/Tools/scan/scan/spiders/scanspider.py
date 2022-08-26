@@ -21,25 +21,21 @@ def md5(parm):
 
 class ScanSpider(scrapy.Spider):
     name = 'scan'
-    username = "CloudY"
-    password = "Fuck741"
     server_url = "http://45.33.39.137/zadc/"
-    login_url = f'index.php?page=gamelogin&ver=0.1&tz=7&' \
-                f'device_id=51dd0b0337c00c2e03c5bb110a56f818&device_name=OPPO&' \
-                f'username={username}&password={md5(password)}'
     galaxy, system = 1, 1
-    url = f'http://45.33.39.137/zadc/game.php?page=galaxy&mode=2&galaxy={galaxy}&system={system}'
-    start_urls = [url]
-    def __init__(self,**kwargs):
-        super(ScanSpider, self).__init__(**kwargs)
-        self.kwargs=kwargs
-        self.server=kwargs.get('server')
-        self.server_url=self.kwargs.get('server_url')
-        self.username=self.kwargs.get('username')
-        self.password=self.kwargs.get('password')
 
+    def __init__(self, **kwargs):
+        super(ScanSpider, self).__init__(**kwargs)
+        self.kwargs = kwargs
+        self.server = kwargs.get('server')
+        self.server_url = self.kwargs.get('server_url')
+        self.username = self.kwargs.get('username')
+        self.password = self.kwargs.get('password')
 
     def start_requests(self):
+        self.login_url = f'index.php?page=gamelogin&ver=0.1&tz=7&' \
+                         f'device_id=51dd0b0337c00c2e03c5bb110a56f818&device_name=OPPO&' \
+                         f'username={self.username}&password={md5(self.password)}'
         url = self.server_url + self.login_url
         yield FormRequest(url, method='post', body=crypto(url), callback=self.parse_login)
 
@@ -50,15 +46,13 @@ class ScanSpider(scrapy.Spider):
         self.start_urls.clear()
         for i in range(1, 2):
             for j in range(2 - i % 2, 151 - i % 2, 2):
-                url = self.server_url+f'game.php?page=galaxy&mode=2&galaxy={j}&system={i}'
+                url = self.server_url + f'game.php?page=galaxy&mode=2&galaxy={j}&system={i}'
                 self.start_urls.append(url)
-        # i, j = 1, 1
-        # self.url = f'http://45.33.39.137/zadc/game.php?page=galaxy&mode=2&galaxy={j}&system={i}'
-        # self.start_urls.append(self.url)
+
 
         for i in self.start_urls:
-            cookie={'sess_id':ssid,'ppy_id':ppy_id}
-            yield scrapy.Request(i,cookies=cookie, callback=self.parse_galaxy, method='POST',)
+            cookie = {'sess_id': ssid, 'ppy_id': ppy_id}
+            yield scrapy.Request(i, cookies=cookie, callback=self.parse_galaxy, method='POST', )
 
     def parse_galaxy(self, response):
         data = json.loads(response.body)
