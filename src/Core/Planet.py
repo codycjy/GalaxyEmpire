@@ -1,30 +1,27 @@
 import logging
 from collections import defaultdict
 
-
 from src.Core.GalaxyCore import GalaxyCore
 
+
 class Planet(GalaxyCore):
-    def __init__(self,loginInfo):
+    def __init__(self, loginInfo):
         self.updateInformation(loginInfo)
-        self.fleet= defaultdict(dict)
+        self.fleet = defaultdict(dict)
         self.resources = {}
 
-
-    def updateInformation(self,loginInfo):
+    def updateInformation(self, loginInfo):
         self.ssid = loginInfo['sess_id']
-        self.ppy_id=loginInfo['ppy_id']
+        self.ppy_id = loginInfo['ppy_id']
         self.server = loginInfo['server']
         self.planetId = loginInfo['planetId']
         self.position = loginInfo['position']
-
 
     def getInformation(self):
         """
         return a tuple of a tuple of position and planetId
         """
-        return self.position,self.planetId
-     
+        return self.position, self.planetId
 
     def updateResources(self):
         """
@@ -32,16 +29,16 @@ class Planet(GalaxyCore):
         """
         result = self.changePlanet(self.planetId)
         for i in (result['result']['fleetInfo']['FleetsOnPlanet']):
-            if i['id']==503 or i['id']==212:
+            if i['id'] == 503 or i['id'] == 212:
                 continue
-            self.fleet['ship'+str(i['id'])]=i['count']
+            self.fleet['ship' + str(i['id'])] = i['count']
 
-        resource= result['result']['buildInfo']['result']['PlanetInfo']
+        resource = result['result']['buildInfo']['result']['PlanetInfo']
         logging.debug(resource)
-        self.resources = {'metal':resource['metal'],
-                'crystal':resource['crystal'],
-                'deuterium':resource['deuterium'],
-                }
+        self.resources = {'metal': resource['metal'],
+                          'crystal': resource['crystal'],
+                          'deuterium': resource['deuterium'],
+                          }
 
     def getFleet(self) -> dict:
         """
@@ -54,5 +51,3 @@ class Planet(GalaxyCore):
         return the resources of the planet
         """
         return self.resources
-
-
