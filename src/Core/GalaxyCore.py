@@ -1,17 +1,15 @@
 import hashlib
-import queue
 import json
 import logging
 import sys
 from collections import defaultdict
-
+from arguments import SALT
 import requests
 
-salt = 'b6bd8a93c54cc404c80d5a6833ba12eb'
 
 
 def crypto(url, opt=''):
-    opt_w = opt + salt
+    opt_w = opt + SALT
     data = opt + "&verifyKey=" + md5(url + opt_w)
     return data
 
@@ -87,7 +85,7 @@ class GalaxyCore:
         'g10': 'http://45.33.39.137/g10/'
     }
 
-    salt = "b6bd8a93c54cc404c80d5a6833ba12eb"
+    SALT = "b6bd8a93c54cc404c80d5a6833ba12eb"
 
     def __init__(self, username: str, password: str, server: str):
         self.username = username
@@ -112,7 +110,7 @@ class GalaxyCore:
             args.update(extra_args)
             url = self.serverUrlList[self.server] + url + addArgs(args)
         except KeyError as e:
-            logging.warning("server wrong")
+            logging.warning("server wrong "+str(e))
             sys.exit(0)
         logging.debug(url)
         try:
