@@ -35,7 +35,7 @@ headers = {
 
 
 class GalaxyCore:
-    fleetLevel = {
+    fleet = {
         20: defaultdict(int, {
             'ds': 2,
             'bs': 0,
@@ -93,7 +93,6 @@ class GalaxyCore:
         self.server = server
         self.ppy_id = None
         self.ssid = None
-        self.fleet = defaultdict(dict)
         self.planetIdDict = defaultdict(str)
         self.planet = {}
         self.login()
@@ -115,9 +114,14 @@ class GalaxyCore:
         logging.debug(url)
         try:
             req = requests.post(url, headers=headers, data=crypto(url))
-            return {'status': 0, 'data': json.loads(req.text)}
+            data=json.loads(req.text)
+            if data['status'] != 'error':
+                return {'status': 0, 'data': data}
+            else:
+                logging.warning(data['err_msg'])
+                return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
         except Exception as e:
-            logging.warning(e)
+            logging.warning(str(e))
             return {'status': -1}
 
     def generateFleet(self, level):
@@ -142,6 +146,7 @@ class GalaxyCore:
         if result['status'] == 0:
             loginResult = result['data']
         else:
+            logging.warning(result)
             return {'status': -1, 'data': result['data']}
         try:
             self.ppy_id = loginResult['ppy_id']
