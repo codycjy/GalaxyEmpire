@@ -1,3 +1,5 @@
+import logging
+import sys
 from collections import defaultdict
 
 from src.Core.Galaxy import Galaxy
@@ -6,16 +8,22 @@ EXPLORE = 0  # 1 启用探测任务 0 关闭探测任务
 EXPLORETIMES = 1  # 设置单次探险舰队数目
 EXPLORETARGET = []  # 设置探险目标 格式如[[1,1,1],[1,1,2]]  建议攻击五个以上 探险一个足够
 EXPLORELEVEL = 99  # 选择探险舰队
-EXPLOREFROM = "000001"  # 探险起始星球ID
+EXPLOREFROM = "000001"  # 探险起始星球ID 可通过SHOWID查询
 
 ATTACK = 0  # 1 启用攻击任务 0 关闭攻击任务
 ATTACKTIMES = 1  # 设置单次舰队探险数目
 ATTACKTARGET = []  # 设置攻击目标 格式如上
 ATTACKLEVEL = 20  # 选择攻击舰队
-ATTACKFROM = "00001"  # 攻击起始星球ID
+ATTACKFROM = "00001"  # 攻击起始星球ID 可通过SHOWID查询
 
+ACCOUNT, PASSWORD, SERVER = "", "", ""  # 依次为 用户名 密码 服务器
 ESCAPE = 0  # 1 启用逃跑任务 0 关闭逃逸任务
 
+SHOWID = 0  # 1 显示星球ID 0 不显示星球ID 正常使用脚本时请设置为0
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',  # 日志格式
+                    )
 fleet = {
     20: defaultdict(int, {
         'ds': 2,
@@ -61,10 +69,11 @@ task['escape'] = ESCAPE
 if __name__ == '__main__':
     target2lst(ATTACKTARGET, attackTargetList)
     target2lst(EXPLORETARGET, exploreTargetList)
-    task['attack'] = 1
-    task['explore'] = 1
-    task['escape'] = 1
-    G = Galaxy('user', 'pass', 'g10')  # 依次为 用户名 密码 服务器
+    G = Galaxy(ACCOUNT, PASSWORD, SERVER)
+    if SHOWID:
+        G.showPlanetId()
+        sys.exit(0)
+
     G.getTasks(attackTargetList, (ATTACKLEVEL, ATTACKTIMES, ATTACKFROM), exploreTargetList,
                (EXPLORELEVEL, EXPLORETIMES, EXPLOREFROM), task,
                fleet)
