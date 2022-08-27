@@ -50,7 +50,6 @@ class Galaxy(GalaxyCore):
             for _ in range(task['times']):
                 result=self.Attack(task['target'], task['level'])
                 waittime = max(result['waittime'], waittime) + 30
-            logging.debug(result)
             yield waittime
 
         elif task['type'] == 2:
@@ -265,6 +264,9 @@ class Galaxy(GalaxyCore):
             await asyncio.sleep(sleepTime)
 
     async def asyncTaskGenerator(self):
+        """
+        Generates all async tasks here
+        """
         taskLst = []
         if self.isAttack:
             attackTask = asyncio.create_task(self.addAttackTask())
