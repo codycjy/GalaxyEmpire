@@ -33,7 +33,7 @@ class Galaxy(GalaxyCore):
         self.isExplore = taskEnabled['explore']
         self.isEscaping = taskEnabled['escape']
 
-        self.fleet = fleetLevel if fleetLevel is not None else self.fleetLevel
+        self.fleet = fleetLevel if fleetLevel is not None else self.fleet
 
     def taskCore(self, task):
         """
@@ -76,7 +76,7 @@ class Galaxy(GalaxyCore):
         url = "game.php?page=my_fleet1"
         __args = {}
         __args.update(dict(zip(['type', 'mission'], [4, 15] if 50 < level < 100 else [1, 1])))
-        if not self.fleetLevel[level]:
+        if not self.fleet[level]:
             logging.warning("wrong task, will not attack")
             return
         else:
