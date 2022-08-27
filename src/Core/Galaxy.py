@@ -33,7 +33,7 @@ class Galaxy(GalaxyCore):
         self.isExplore = taskEnabled['explore']
         self.isEscaping = taskEnabled['escape']
 
-        self.fleetLevel = fleetLevel if fleetLevel is not None else self.fleetLevel
+        self.fleet = fleetLevel if fleetLevel is not None else self.fleetLevel
 
     def taskCore(self, task):
         """
@@ -48,7 +48,9 @@ class Galaxy(GalaxyCore):
             waittime = 0
             self.changePlanet(task['from'])
             for _ in range(task['times']):
-                waittime = max(self.Attack(task['target'], task['level'])['waittime'], waittime) + 30
+                result=self.Attack(task['target'], task['level'])
+                waittime = max(result['waittime'], waittime) + 30
+            logging.debug(result)
             yield waittime
 
         elif task['type'] == 2:
@@ -75,7 +77,7 @@ class Galaxy(GalaxyCore):
         __args = {}
         __args.update(dict(zip(['type', 'mission'], [4, 15] if 50 < level < 100 else [1, 1])))
         if not self.fleetLevel[level]:
-            logging.warning("wrong task")
+            logging.warning("wrong task, will not attack")
             return
         else:
             __args.update(self.generateFleet(level))
@@ -98,7 +100,8 @@ class Galaxy(GalaxyCore):
         __args = {}
         try:
             __args = self.getAttackFleet(target, level)
-        except Exception:
+        except Exception as e:
+            logging.warning(e)
             return {'status': -1, 'waittime': 0}
 
         logging.info('Attack')
@@ -129,6 +132,17 @@ class Galaxy(GalaxyCore):
                 self.planet[i[0]] = Planet(planetInformation)
         else:
             return {'status': -1, 'data': result['data']}
+
+    def showPlanetId(self):
+        print("最后一位为0是行星，为1是月球")
+        url = "game.php?page=buildings"
+        result = self._post(url)['data']
+        for i in result['result']['buildInfo']['result']['Planets'].items():
+            data = i[1]
+            self.planet[i[0]] = list(
+                map(int,
+                    [data['galaxy'], data['system'], data['planet'],  data['planet_type'] == '3' ]))
+            print(i[0], self.planet[i[0]])
 
     def checkEnemy(self):
         """
@@ -251,15 +265,17 @@ class Galaxy(GalaxyCore):
             await asyncio.sleep(sleepTime)
 
     async def asyncTaskGenerator(self):
+        taskLst = []
         if self.isAttack:
             attackTask = asyncio.create_task(self.addAttackTask())
-            await attackTask
+            taskLst.append(attackTask)
         if self.isExplore:
             exploreTask = asyncio.create_task(self.addExploreTask())
-            await exploreTask
+            taskLst.append(exploreTask)
         if self.isEscaping:
             escapeTask = asyncio.create_task(self.Detect())
-            await escapeTask
+            taskLst.append(escapeTask)
+        await asyncio.gather(*taskLst)
 
     def run(self):
         asyncio.run(self.asyncTaskGenerator())
