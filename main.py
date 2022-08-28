@@ -8,7 +8,7 @@ EXPLORE = 0  # 1 启用探测任务 0 关闭探测任务
 EXPLORETIMES = 1  # 设置单次探险舰队数目
 EXPLORETARGET = []  # 设置探险目标 格式如[[1,1,1],[1,1,2]]  建议攻击五个以上 探险一个足够
 EXPLORELEVEL = 99  # 选择探险舰队
-EXPLOREFROM = "000001"  # 探险起始星球ID 可通过SHOWID查询
+EXPLOREFROM = "0001"  # 探险起始星球ID 可通过SHOWID查询
 
 ATTACK = 0  # 1 启用攻击任务 0 关闭攻击任务
 ATTACKTIMES = 1  # 设置单次舰队探险数目
@@ -77,4 +77,4 @@ if __name__ == '__main__':
     G.getTasks(attackTargetList, (ATTACKLEVEL, ATTACKTIMES, ATTACKFROM), exploreTargetList,
                (EXPLORELEVEL, EXPLORETIMES, EXPLOREFROM), task,
                fleet)
-    G.run()
+    G.runTask()

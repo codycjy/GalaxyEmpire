@@ -48,7 +48,7 @@ class Galaxy(GalaxyCore):
             waittime = 0
             self.changePlanet(task['from'])
             for _ in range(task['times']):
-                result=self.Attack(task['target'], task['level'])
+                result = self.Attack(task['target'], task['level'])
                 waittime = max(result['waittime'], waittime) + 30
             yield waittime
 
@@ -113,7 +113,7 @@ class Galaxy(GalaxyCore):
                 waittime = (float(result['data']['result']['backtime'])) + 30
                 isFailed = False
 
-        logging.info(isFailed)
+        logging.info(f"Is failed: {isFailed}")
         return {'status': -1, 'waittime': waittime if not isFailed else 0}
 
     def updateBuildingInfo(self):
@@ -140,7 +140,7 @@ class Galaxy(GalaxyCore):
             data = i[1]
             self.planet[i[0]] = list(
                 map(int,
-                    [data['galaxy'], data['system'], data['planet'],  data['planet_type'] == '3' ]))
+                    [data['galaxy'], data['system'], data['planet'], data['planet_type'] == '3']))
             print(i[0], self.planet[i[0]])
 
     def checkEnemy(self):
@@ -242,7 +242,7 @@ class Galaxy(GalaxyCore):
             task['target'] = target
             task['level'] = self.attackLevel
             task['type'] = 1
-            task['times'] = 1
+            task['times'] = self.attackTimes
             task['from'] = self.attackFrom
             logging.debug(task)
             sleepTime = next(self.taskCore(task))
@@ -253,17 +253,17 @@ class Galaxy(GalaxyCore):
         """Generates a new explore task"""
         task = {}
         while True:
-            target = self.attackTargetList[0]
+            target = self.exploreTargetList[0]
             task['target'] = target
             task['level'] = self.exploreLevel
             task['type'] = 1
-            task['times'] = 1
+            task['times'] = self.exploreTimes
             task['from'] = self.exploreFrom
             sleepTime = next(self.taskCore(task))
             logging.info(f"Exploring! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
 
-    async def asyncTaskGenerator(self):
+    def asyncTaskGenerator(self):
         """
         Generates all async tasks here
         """
@@ -277,10 +277,14 @@ class Galaxy(GalaxyCore):
         if self.isEscaping:
             escapeTask = asyncio.create_task(self.Detect())
             taskLst.append(escapeTask)
+        return taskLst
+
+    async def gatherTask(self):
+        taskLst = self.asyncTaskGenerator()
         await asyncio.gather(*taskLst)
 
-    def run(self):
-        asyncio.run(self.asyncTaskGenerator())
+    def runTask(self):
+        asyncio.run(self.gatherTask())
 
 
 if __name__ == "__main__":

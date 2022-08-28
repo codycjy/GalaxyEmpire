@@ -64,7 +64,7 @@ class GalaxyCore:
     }
 
     ShipToID = {'ds': 'ship214', 'de': 'ship213', 'cargo': 'ship203', 'bs': 'ship207',
-                'satellite': 'ship210'}
+                'satellite': 'ship204'}
 
     serverUrlList = {
         'ze': 'http://45.33.39.137/zadc/',
