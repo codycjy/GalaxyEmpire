@@ -7,7 +7,6 @@ from arguments import SALT
 import requests
 
 
-
 def crypto(url, opt=''):
     opt_w = opt + SALT
     data = opt + "&verifyKey=" + md5(url + opt_w)
@@ -64,7 +63,8 @@ class GalaxyCore:
     }
 
     ShipToID = {'ds': 'ship214', 'de': 'ship213', 'cargo': 'ship203', 'bs': 'ship207',
-                'satellite': 'ship204'}
+                'satellite': 'ship210', 'lf': 'ship204', 'hf': 'ship205', 'cr': 'ship206',
+                'dr': 'ship215', 'bomb': 'ship211', 'guard': 'ship216'}
 
     serverUrlList = {
         'ze': 'http://45.33.39.137/zadc/',
@@ -97,6 +97,9 @@ class GalaxyCore:
         self.planet = {}
         self.login()
 
+    def startup(self):
+        self.login()
+
     def _post(self, url: str, args: dict = {}) -> dict:
         """
         Everything work with network start in this method
@@ -109,12 +112,12 @@ class GalaxyCore:
             args.update(extra_args)
             url = self.serverUrlList[self.server] + url + addArgs(args)
         except KeyError as e:
-            logging.warning("server wrong "+str(e))
+            logging.warning("server wrong " + str(e))
             sys.exit(0)
         logging.debug(url)
         try:
             req = requests.post(url, headers=headers, data=crypto(url))
-            data=json.loads(req.text)
+            data = json.loads(req.text)
             if data['status'] != 'error':
                 return {'status': 0, 'data': data}
             else:

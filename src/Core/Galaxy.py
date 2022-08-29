@@ -27,13 +27,17 @@ class Galaxy(GalaxyCore):
         self.exploreLevel = exploreLevel[0]
         self.exploreTargetList = exploreTargetList
         self.exploreTimes = exploreLevel[1]
-        self.exploreFrom = self.planetIdDict[2]
+        self.exploreFrom = exploreLevel[2]
 
         self.isAttack = taskEnabled['attack']
         self.isExplore = taskEnabled['explore']
         self.isEscaping = taskEnabled['escape']
 
         self.fleet = fleetLevel if fleetLevel is not None else self.fleet
+
+    def startup(self):
+        self.login()
+        self.updateBuildingInfo()
 
     def taskCore(self, task):
         """
@@ -49,7 +53,8 @@ class Galaxy(GalaxyCore):
             self.changePlanet(task['from'])
             for _ in range(task['times']):
                 result = self.Attack(task['target'], task['level'])
-                waittime = max(result['waittime'], waittime) + 30
+                waittime = max(result['waittime'], waittime)
+            waittime = max(waittime, 0) + 30
             yield waittime
 
         elif task['type'] == 2:
@@ -156,6 +161,7 @@ class Galaxy(GalaxyCore):
         result = result['data']['result']  # attacking enemies
         logging.info(result)
         self.attackedPlanet.clear()
+        self.updateBuildingInfo()
         for i in result:
             plannetId = None
             target = (i['endGalaxy'], i['endSystem'], i['endPlanet'], i['endType'])
@@ -165,7 +171,7 @@ class Galaxy(GalaxyCore):
                 continue
             logging.info("enemy attacking us" + str(plannetId))
             self.attackedPlanet[plannetId] = 1
-            result = next(self.taskCore({'type': 2, 'planetId': plannetId, 'enemyFleet': i['fleet']}))
+            result = next(self.taskCore({'type': 2, 'planetId': plannetId, 'enemyFleet': i['FleetList']}))
 
     def Escape(self, planetId: str, enemyFleet):
         """
@@ -186,7 +192,6 @@ class Galaxy(GalaxyCore):
                 break
         if target:
             self.getEscapeFleet(planet, target)
-        # self.changePlanet(planetId)
 
     def getEscapeFleet(self, planet, destination):
         url = "game.php?page=my_fleet1"
@@ -214,8 +219,8 @@ class Galaxy(GalaxyCore):
             return
         deCost = min(availSpace, resource['deuterium'] - cost)
         __args.update({'deuterium': deCost})
-        __args.update({'metal': min(resource['metal'], (availSpace - deCost) // 4 * 3)})
-        __args.update({'crystal': min(resource['crystal'], (availSpace - deCost) // 4 * 1)})
+        __args.update({'metal': min(float(resource['metal']), (availSpace - deCost) // 4 * 3)})
+        __args.update({'crystal': min(float(resource['crystal']), (availSpace - deCost) // 4 * 1)})
         url = "game.php?page=fleet3"
         res = self._post(url, __args)  # send fleet
         logging.info(res['data'])
