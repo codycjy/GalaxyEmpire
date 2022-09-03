@@ -22,14 +22,20 @@ class DbPipeline:
         self.cur = self.conn.cursor()
 
     def open_spider(self, spider):
-        self.config=spider.kwargs
+        self.config = spider.kwargs
         self.create_table()
 
     def create_table(self):
-        tablename=self.config.get('server')
+        tablename = self.config.get('server')
         sql = f"DROP table  IF EXISTS {tablename};"
         self.cur.execute(sql)
-        sql=f"create table {tablename} (id int auto_increment primary key,name varchar(40) not null,pos varchar(20) not null , crystal int , metal int);"
+        sql = f"create table {tablename} (id int auto_increment primary key," \
+              f"name varchar(40) not null," \
+              f"pos varchar(20) not null ," \
+              f" crystal int , " \
+              f"metal int," \
+              f"has_ally int," \
+              f"ally_name varchar(40));"
         self.cur.execute(sql)
         self.conn.commit()
 
@@ -38,8 +44,15 @@ class DbPipeline:
         self.conn.commit()
         pass
 
-    def process_item(self, item:dict, spider):
-        self.cur.execute("insert into ze(name,pos,crystal,metal) VALUES (%s,%s,%s,%s)",
-                         (item.get('username'), item.get('position'), int(item.get('derbis_crystal',0)), int(item.get('derbis_metal',0))))
+    def process_item(self, item: dict, spider):
+        self.cur.execute("insert into ze(name,pos,crystal,metal,has_ally,ally_name) VALUES (%s,%s,%s,%s,%s,%s)",
+                         (item.get('username'),
+                          item.get('position'),
+                          int(item.get('derbis_crystal', 0)),
+                          int(item.get('derbis_metal', 0)),
+                          item.get('has_ally', 0),
+                          item.get('ally_name', ''))
+                         )
+
         self.conn.commit()
         return item

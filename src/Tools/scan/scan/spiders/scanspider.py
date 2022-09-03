@@ -44,7 +44,7 @@ class ScanSpider(scrapy.Spider):
         ppy_id = user['ppy_id']
         ssid = user['ssid']
         self.start_urls.clear()
-        for i in range(1, 2):
+        for i in range(1, 51):
             for j in range(2 - i % 2, 151 - i % 2, 2):
                 url = self.server_url + f'game.php?page=galaxy&mode=2&galaxy={j}&system={i}'
                 self.start_urls.append(url)
@@ -68,4 +68,10 @@ class ScanSpider(scrapy.Spider):
                 else:
                     planet_info['derbis_metal'] = 0
                     planet_info['derbis_crystal'] = 0
+                if i['ally_name']:
+                    planet_info['has_ally'] = 1
+                    planet_info['ally_name'] = i['ally_name']
+                else:
+                    planet_info['has_ally'] = 0
+                    planet_info['ally_name'] = ''
                 yield planet_info
