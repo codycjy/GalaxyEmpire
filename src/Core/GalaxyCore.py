@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import sys
+import time
 from collections import defaultdict
 from arguments import SALT
 import requests
@@ -66,24 +67,57 @@ class GalaxyCore:
                 'satellite': 'ship210', 'lf': 'ship204', 'hf': 'ship205', 'cr': 'ship206',
                 'dr': 'ship215', 'bomb': 'ship211', 'guard': 'ship216'}
 
-    serverUrlList = {
-        'ze': 'http://45.33.39.137/zadc/',
-        'g1': 'http://45.33.44.248/yoox/',
-        'g5': 'http://45.33.39.137/g5/',
-        'g4': 'http://173.230.155.34/g4/',
-        'g3': 'http://173.230.155.34/g3/',
-        'g2': 'http://173.255.250.41/g2/',
-        'yo': 'http://45.33.44.248/yoox/',
-        'jd': 'http://173.255.250.41/jedi/',
-        'at': 'http://45.33.39.137/zeat/',
-        'dr': 'http://45.33.44.248/ddcc/',
-        'co': 'http://45.33.44.248/ddcc/',
-        'aq': 'http://173.230.155.34/carina/',
-        'g6': 'http://45.33.44.248/g6/',
-        'g7': 'http://173.255.250.41/g7/',
-        'g8': 'http://45.33.44.248/g8/',
-        'g10': 'http://45.33.39.137/g10/'
-    }
+    serverUrlList = {'g11': 'http://173.255.250.41/g11/',
+                     'g10': 'http://45.33.39.137/g10/',
+                     'g8': 'http://45.33.44.248/g8/',
+                     'g9': 'http://173.255.250.41/g9/',
+                     'g5': 'http://173.255.250.41/g5g7/',
+                     'g7': 'http://173.255.250.41/g5g7/',
+                     'g6': 'http://45.33.44.248/g4g6/',
+                     'g4': 'http://45.33.44.248/g4g6/',
+                     'g3': 'http://173.230.155.34/g2g3/',
+                     'g2': 'http://173.230.155.34/g2g3/',
+                     'g1': 'http://45.33.44.248/yoox/',
+                     'yo': 'http://45.33.44.248/yoox/',
+                     'je': 'http://173.230.155.34/jely/',
+                     'ly': 'http://173.255.250.41/ge/',
+                     'ze': 'http://45.33.39.137/zadc/',
+                     'at': 'http://45.33.39.137/zadc/',
+                     'dr': 'http://173.255.250.41/ge/',
+                     'co': 'http://45.33.39.137/zadc/',
+                     'de': 'http://45.33.39.137/zadc/',
+                     'cy': 'http://45.33.39.137/zadc/',
+                     'se': 'http://45.33.44.248/serpens/',
+                     'sc': 'http://45.33.39.137/tmsc/',
+                     'aq': 'http://173.230.155.34/carina/',
+                     'ca': 'http://173.230.155.34/glge/',
+                     'sa': 'http://45.33.39.137/tmsc/',
+                     'ph': 'http://45.33.44.248/phoenix/',
+                     'hl': 'http://173.255.250.41/hydra/',
+                     'mu': 'http://45.33.39.137/tmsc/',
+                     'tu': 'http://45.33.39.137/tmsc/',
+                     'vo': 'http://45.33.39.137/tmsc/',
+                     'do': 'http://45.33.39.137/tmsc/',
+                     'cr': 'http://45.33.39.137/tmsc/',
+                     'fo': 'http://173.230.155.34/glge/',
+                     'ge': 'http://173.230.155.34/glge/',
+                     'gl': 'http://173.230.155.34/glge/',
+                     'el': 'http://173.230.155.34/ge/',
+                     've': 'http://173.255.250.41/ge/',
+                     'oc': 'http://173.230.155.34/ge/',
+                     'ta': 'http://173.230.155.34/ge/',
+                     'pi': 'http://173.230.155.34/ge/',
+                     'bo': 'http://173.230.155.34/ge/',
+                     'in': 'http://173.230.155.34/ge/',
+                     'or': 'http://173.255.250.41/ge/',
+                     'ar': 'http://173.255.250.41/ge/',
+                     'ap': 'http://173.255.250.41/ge/',
+                     'gr': 'http://173.255.250.41/ge/',
+                     'ce': 'http://173.255.250.41/ge/',
+                     'pa': 'http://173.255.250.41/ge/',
+                     'vi': 'http://173.255.250.41/ge/',
+                     'le': 'http://173.255.250.41/ge/'
+                     }
 
     SALT = "b6bd8a93c54cc404c80d5a6833ba12eb"
 
@@ -95,12 +129,11 @@ class GalaxyCore:
         self.ssid = None
         self.planetIdDict = defaultdict(str)
         self.planet = {}
-        self.login()
 
     def startup(self):
         self.login()
 
-    def _post(self, url: str, args: dict = {}) -> dict:
+    def _post(self, url: str, args: dict) -> dict:
         """
         Everything work with network start in this method
         """
@@ -112,19 +145,23 @@ class GalaxyCore:
             args.update(extra_args)
             url = self.serverUrlList[self.server] + url + addArgs(args)
         except KeyError as e:
-            logging.warning("server wrong " + str(e))
+            logging.critical("server wrong " + str(e))
             sys.exit(0)
         logging.debug(url)
         try:
             req = requests.post(url, headers=headers, data=crypto(url))
             data = json.loads(req.text)
+            logging.debug(data)
             if data['status'] != 'error':
                 return {'status': 0, 'data': data}
             else:
                 logging.warning(data['err_msg'])
                 return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
+        except json.JSONDecodeError as e:
+            logging.warning("JSONDecodeError " + str(e))
+            sys.exit(0)
         except Exception as e:
-            logging.warning(str(e))
+            logging.error(str(e))
             return {'status': -1}
 
     def generateFleet(self, level):
@@ -134,7 +171,7 @@ class GalaxyCore:
         return fleet
 
     def getSession(self):
-        "return session as dict"
+        """return session as dict"""
         return {"sess_id": self.ssid, "ppy_id": self.ppy_id}
 
     def login(self):
@@ -169,7 +206,17 @@ class GalaxyCore:
         args = {"cp": planetId}
         logging.info('changePlanet: ' + str(planetId))
         result = self._post(url, args)
-        return result['data']
+        if result['status'] == 0:
+            return result['data']
+        else:
+            try:
+                logging.warning(result['err_msg'])
+            except KeyError:
+                logging.warning(result)
+            finally:
+                logging.warning("changePlanet failed, sleep 15s and retry")
+                time.sleep(15)
+                return self.changePlanet(planetId)
 
 
 if __name__ == "__main__":

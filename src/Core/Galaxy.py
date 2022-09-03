@@ -1,6 +1,9 @@
 import asyncio
+import json
 import logging
 from collections import defaultdict
+
+import requests
 
 from src.Core.GalaxyCore import GalaxyCore
 from src.Core.Planet import Planet
@@ -16,6 +19,12 @@ class Galaxy(GalaxyCore):
         self.resourcesOnPlanet = defaultdict()
         self.attackedPlanet = defaultdict(int)
         self._planet = {}
+        try:
+            serverLst = self.showServerList()
+            self.serverUrlList = serverLst
+        except Exception as e:
+            logging.warning(e)
+        self.startup()
         # get all the planet and initialize them
 
     def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):
@@ -44,9 +53,9 @@ class Galaxy(GalaxyCore):
         all task based on task Core func including relogin
         0:relogin 1:attack&&explore 2:escape 
         """
-
+        self.relogin()
         if task['type'] == 0:
-            self.relogin()
+            # self.relogin()
             yield 0
         elif task['type'] == 1:
             waittime = 0
@@ -74,7 +83,7 @@ class Galaxy(GalaxyCore):
         """
         while True:
             await asyncio.sleep(900)
-            result = next(self.taskCore({'type': 0}))
+            next(self.taskCore({'type': 0}))
 
     def getAttackFleet(self, target, level):
         url = "game.php?page=my_fleet1"
@@ -87,6 +96,7 @@ class Galaxy(GalaxyCore):
             __args.update(self.generateFleet(level))
             __args.update(target)
 
+        logging.info(__args)
         logging.debug(__args)
         result = self._post(url, __args)
         if result['status'] == 0:
@@ -111,13 +121,16 @@ class Galaxy(GalaxyCore):
         logging.info('Attack')
         isFailed = True
         waittime = 0
-        if level > 50: __args.update(additional_args)
+        if level > 50:
+            __args.update(additional_args)
+        logging.info(__args)
         result = self._post(url, __args)
         if result['status'] == 0:
             if result['data']['status'] == 'ok':
                 waittime = (float(result['data']['result']['backtime'])) + 30
                 isFailed = False
 
+        logging.info(__args)
         logging.info(f"Is failed: {isFailed}")
         return {'status': -1, 'waittime': waittime if not isFailed else 0}
 
@@ -148,6 +161,29 @@ class Galaxy(GalaxyCore):
                     [data['galaxy'], data['system'], data['planet'], data['planet_type'] == '3']))
             print(i[0], self.planet[i[0]])
 
+    def showServerList(self) -> dict:  # alpha version function
+        """
+        auto update server list
+        :return: server list
+        """
+        url = "http://192.81.130.154/gc2_sl_google.php"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                          ' AppleWebKit/537.36 (KHTML, like Gecko)'
+                          ' Chrome/80.0.3987.149 Safari/537.36'
+        }
+        result = requests.get(url, headers=headers)
+        data = json.loads(result.text)
+        server = {}
+        for i in data['lists']:
+            name = i['name']
+            if ':' in name:
+                name = name.split(':')[0]
+            else:
+                name = name[:2].lower()
+            server[name] = i['url']
+        return server
+
     def checkEnemy(self):
         """
         check whether there is enemy attacking us
@@ -163,7 +199,6 @@ class Galaxy(GalaxyCore):
         self.attackedPlanet.clear()
         self.updateBuildingInfo()
         for i in result:
-            plannetId = None
             target = (i['endGalaxy'], i['endSystem'], i['endPlanet'], i['endType'])
             plannetId = self.planetIdDict[target]
             if not plannetId:
@@ -177,7 +212,6 @@ class Galaxy(GalaxyCore):
         """
         escape from planet
         """
-        url = 'game.php?page=my_fleet1'
         __args = {}
         planet = self.planet[planetId]
         planet.updateResources()
@@ -186,7 +220,8 @@ class Galaxy(GalaxyCore):
         logging.info(enemyFleet)
         target = None
         for i in self.planet.items():
-            if type(i[0]) == tuple: continue
+            if type(i[0]) == tuple:
+                continue
             if i[0] not in self.attackedPlanet.keys() and i[0] != planetId:
                 target = i[1].getInformation()[0]
                 break
@@ -208,7 +243,8 @@ class Galaxy(GalaxyCore):
         __args.update({'token': res['data']['result']['token']})
 
         if res['status'] == 0:
-            if res['data']['status'] == 'error': return
+            if res['data']['status'] == 'error':
+                return
             __args['token'] = res['data']['result']['token']
         space = res['data']['result']['fleetroom']
         cost = res['data']['result']['consumption']
@@ -234,7 +270,7 @@ class Galaxy(GalaxyCore):
         """
         while True:
             self.checkEnemy()
-            await asyncio.sleep(60)
+            await asyncio.sleep(180)
 
     async def addAttackTask(self):
         """Generates a new attack task"""
@@ -282,6 +318,7 @@ class Galaxy(GalaxyCore):
         if self.isEscaping:
             escapeTask = asyncio.create_task(self.Detect())
             taskLst.append(escapeTask)
+        taskLst.append(asyncio.create_task(self.enableAutoLogin()))
         return taskLst
 
     async def gatherTask(self):
