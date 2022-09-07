@@ -133,7 +133,7 @@ class GalaxyCore:
     def startup(self):
         self.login()
 
-    def _post(self, url: str, args: dict) -> dict:
+    def _post(self, url: str, args: dict={}) -> dict:
         """
         Everything work with network start in this method
         """
@@ -201,22 +201,23 @@ class GalaxyCore:
         """
         change planet and return planet information.
         """
-
+        self.login()
         url = f'game.php?page=buildings&mode='
         args = {"cp": planetId}
         logging.info('changePlanet: ' + str(planetId))
         result = self._post(url, args)
         if result['status'] == 0:
-            return result['data']
-        else:
-            try:
-                logging.warning(result['err_msg'])
-            except KeyError:
-                logging.warning(result)
-            finally:
-                logging.warning("changePlanet failed, sleep 15s and retry")
-                time.sleep(15)
-                return self.changePlanet(planetId)
+            data = result.get('data')
+            if data:
+                return data
+        try:
+            logging.warning(result['err_msg'])
+        except KeyError:  # TODO more exception
+            logging.warning(result)
+        finally:
+            logging.warning("changePlanet failed, sleep 15s and retry")
+            time.sleep(15)
+            return self.changePlanet(planetId)
 
 
 if __name__ == "__main__":
