@@ -11,6 +11,30 @@ from src.Core.Planet import Planet
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 
 
+def showServerList() -> dict:  # alpha version function
+    """
+    auto update server list
+    :return: server list
+    """
+    url = "http://192.81.130.154/gc2_sl_google.php"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                      ' AppleWebKit/537.36 (KHTML, like Gecko)'
+                      ' Chrome/80.0.3987.149 Safari/537.36'
+    }
+    result = requests.get(url, headers=headers)
+    data = json.loads(result.text)
+    server = {}
+    for i in data['lists']:
+        name = i['name']
+        if ':' in name:
+            name = name.split(':')[0]
+        else:
+            name = name[:2].lower()
+        server[name] = i['url']
+    return server
+
+
 class Galaxy(GalaxyCore):
     def __init__(self, username: str, password: str, server: str):
         super().__init__(username, password, server)
@@ -20,7 +44,7 @@ class Galaxy(GalaxyCore):
         self.attackedPlanet = defaultdict(int)
         self._planet = {}
         try:
-            serverLst = self.showServerList()
+            serverLst = showServerList()
             self.serverUrlList = serverLst
         except Exception as e:
             logging.warning(e)
@@ -149,40 +173,6 @@ class Galaxy(GalaxyCore):
                 self.planet[i[0]] = Planet(planetInformation)
         else:
             return {'status': -1, 'data': result['data']}
-
-    def showPlanetId(self):
-        print("最后一位为0是行星，为1是月球")
-        url = "game.php?page=buildings"
-        result = self._post(url)['data']
-        for i in result['result']['buildInfo']['result']['Planets'].items():
-            data = i[1]
-            self.planet[i[0]] = list(
-                map(int,
-                    [data['galaxy'], data['system'], data['planet'], data['planet_type'] == '3']))
-            print(i[0], self.planet[i[0]])
-
-    def showServerList(self) -> dict:  # alpha version function
-        """
-        auto update server list
-        :return: server list
-        """
-        url = "http://192.81.130.154/gc2_sl_google.php"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                          ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                          ' Chrome/80.0.3987.149 Safari/537.36'
-        }
-        result = requests.get(url, headers=headers)
-        data = json.loads(result.text)
-        server = {}
-        for i in data['lists']:
-            name = i['name']
-            if ':' in name:
-                name = name.split(':')[0]
-            else:
-                name = name[:2].lower()
-            server[name] = i['url']
-        return server
 
     def checkEnemy(self):
         """
@@ -327,6 +317,34 @@ class Galaxy(GalaxyCore):
 
     def runTask(self):
         asyncio.run(self.gatherTask())
+
+    # extra function area
+    def showPlanetId(self):
+        print("最后一位为0是行星，为1是月球")
+        url = "game.php?page=buildings"
+        result = self._post(url)['data']
+        for i in result['result']['buildInfo']['result']['Planets'].items():
+            data = i[1]
+            self.planet[i[0]] = list(
+                map(int,
+                    [data['galaxy'], data['system'], data['planet'], data['planet_type'] == '3']))
+            print(i[0], self.planet[i[0]])
+
+    def migratePlanet(self, planetId, target):
+        """
+        migrate planet to target
+        :param planetId: planet id
+        :param target: target planet id
+        :return:
+        """
+        # WARNING YOU SHOULD BE RESPONSIBLE FOR YOUR OWN ACTION
+        # ANY ILLEGAL ACTION WILL BE YOUR RESPONSIBILITY
+        url = "game.php?page=items&mod=2&type=100000"
+        __args = {'id': planetId}
+        __args.update({'target_galaxy': target[0]})
+        __args.update({'target_system': target[1]})
+        __args.update({'target_planet': target[2]})
+        self._post(url, __args)
 
 
 if __name__ == "__main__":
