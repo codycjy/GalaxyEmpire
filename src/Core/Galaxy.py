@@ -244,7 +244,7 @@ class Galaxy(GalaxyCore):
         availSpace = space - cost
         if availSpace < 1 or space < 1:
             return
-        deCost = min(availSpace, float(resource['deuterium'] - cost))
+        deCost = min(availSpace, float(resource['deuterium']) - cost)
         __args.update({'deuterium': deCost})
         __args.update({'metal': min(float(resource['metal']), (availSpace - deCost) // 4 * 3)})
         __args.update({'crystal': min(float(resource['crystal']), (availSpace - deCost) // 4 * 1)})
