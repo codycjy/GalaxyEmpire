@@ -243,7 +243,7 @@ class Galaxy(GalaxyCore):
         availSpace = space - cost
         if availSpace < 1 or space < 1:
             return
-        deCost = min(availSpace, resource['deuterium'] - cost)
+        deCost = min(availSpace, float(resource['deuterium'] - cost))
         __args.update({'deuterium': deCost})
         __args.update({'metal': min(float(resource['metal']), (availSpace - deCost) // 4 * 3)})
         __args.update({'crystal': min(float(resource['crystal']), (availSpace - deCost) // 4 * 1)})
@@ -319,10 +319,15 @@ class Galaxy(GalaxyCore):
         asyncio.run(self.gatherTask())
 
     # extra function area
+
     def showPlanetId(self):
         print("最后一位为0是行星，为1是月球")
         url = "game.php?page=buildings"
-        result = self._post(url)['data']
+        result = self._post(url, {})
+        if result['status'] != 0:
+            logging.warning("wrong planet id")
+            return
+        result = result['data']
         for i in result['result']['buildInfo']['result']['Planets'].items():
             data = i[1]
             self.planet[i[0]] = list(
@@ -340,11 +345,23 @@ class Galaxy(GalaxyCore):
         # WARNING YOU SHOULD BE RESPONSIBLE FOR YOUR OWN ACTION
         # ANY ILLEGAL ACTION WILL BE YOUR RESPONSIBILITY
         url = "game.php?page=items&mod=2&type=100000"
+
+        if len(target) != 3 or type(target) not in [list, tuple]:
+            logging.warning("target should be a list of length 3")
+            return
+
         __args = {'id': planetId}
         __args.update({'target_galaxy': target[0]})
         __args.update({'target_system': target[1]})
         __args.update({'target_planet': target[2]})
-        self._post(url, __args)
+        result = self._post(url, __args)
+        if result.get('status') == 0:
+            if result['data']['status'] != 'ok':
+                logging.error(result['data']['error'])
+            else:
+                data: dict = result['data']['result']
+                logging.info(f"migrate {data.get('planet_id')} to"
+                             f" {data.get('galaxy')}.{data.get('system')}.{data.get('planet')} success")
 
 
 if __name__ == "__main__":
