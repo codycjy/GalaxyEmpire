@@ -169,7 +169,8 @@ class Galaxy(GalaxyCore):
                 self.planetIdDict[i[0]] = planet
                 self.planetIdDict[planet] = i[0]
                 planetInformation = self.getSession()
-                planetInformation.update({'server': self.server, 'planetId': i[0], 'position': planet})
+                planetInformation.update({'server': self.server, 'planetId': i[0], 'position': planet,
+                                          'username': self.username, 'password': self.password})
                 self.planet[i[0]] = Planet(planetInformation)
         else:
             return {'status': -1, 'data': result['data']}

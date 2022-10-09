@@ -16,6 +16,8 @@ class Planet(GalaxyCore):
         self.server = loginInfo['server']
         self.planetId = loginInfo['planetId']
         self.position = loginInfo['position']
+        self.username = loginInfo['username']
+        self.password = loginInfo['password']
 
     def getInformation(self):
         """
