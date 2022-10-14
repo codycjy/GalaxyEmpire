@@ -159,7 +159,8 @@ class GalaxyCore:
                 return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
         except json.JSONDecodeError as e:
             logging.warning("JSONDecodeError " + str(e))
-            sys.exit(0)
+            return {'status': -1, 'err_msg': 'JSONDecodeError' }
+            # sys.exit(0)
         except Exception as e:
             logging.error(str(e))
             return {'status': -1}
@@ -187,7 +188,7 @@ class GalaxyCore:
             loginResult = result['data']
         else:
             logging.warning(result)
-            return {'status': -1, 'data': result['data']}
+            return {'status': -1}
         try:
             self.ppy_id = loginResult['ppy_id']
             self.ssid = loginResult['ssid']

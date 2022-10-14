@@ -86,7 +86,7 @@ class Galaxy(GalaxyCore):
             self.changePlanet(task['from'])
             for _ in range(task['times']):
                 result = self.Attack(task['target'], task['level'])
-                waittime = max(result['waittime'], waittime)
+                waittime = max(result.get('waittime',0), waittime)
             waittime = max(waittime, 0) + 30
             yield waittime
 
@@ -156,7 +156,7 @@ class Galaxy(GalaxyCore):
 
         logging.info(__args)
         logging.info(f"Is failed: {isFailed}")
-        return {'status': -1, 'waittime': waittime if not isFailed else 0}
+        return {'waittime': waittime if not isFailed else 0}
 
     def updateBuildingInfo(self):
         url = "game.php?page=buildings"
@@ -173,7 +173,7 @@ class Galaxy(GalaxyCore):
                                           'username': self.username, 'password': self.password})
                 self.planet[i[0]] = Planet(planetInformation)
         else:
-            return {'status': -1, 'data': result['data']}
+            return {'status': -1}
 
     def checkEnemy(self):
         """
@@ -219,7 +219,7 @@ class Galaxy(GalaxyCore):
         if target:
             self.getEscapeFleet(planet, target)
 
-    def getEscapeFleet(self, planet, destination):
+    def getEscapeFleet(self, planet, destination)->None:
         url = "game.php?page=my_fleet1"
         __args = {}
 
@@ -231,6 +231,8 @@ class Galaxy(GalaxyCore):
 
         logging.debug(__args)
         res = self._post(url, __args)  # get fleet information
+        if res['status'] != 0:
+            return
         __args.update({'token': res['data']['result']['token']})
 
         if res['status'] == 0:
@@ -250,8 +252,8 @@ class Galaxy(GalaxyCore):
         __args.update({'crystal': min(float(resource['crystal']), (availSpace - deCost) // 4 * 1)})
         url = "game.php?page=fleet3"
         res = self._post(url, __args)  # send fleet
-        logging.info(res['data'])
-
+        if res['status'] == 0:
+            logging.info(res['data'])
         logging.debug(__args)
 
     async def Detect(self):
@@ -260,7 +262,10 @@ class Galaxy(GalaxyCore):
         if there is, escape
         """
         while True:
-            self.checkEnemy()
+            try:
+                self.checkEnemy()
+            except Exception as e:
+                logging.warning(e)
             await asyncio.sleep(180)
 
     async def addAttackTask(self):
@@ -277,7 +282,13 @@ class Galaxy(GalaxyCore):
             task['times'] = self.attackTimes
             task['from'] = self.attackFrom
             logging.debug(task)
-            sleepTime = next(self.taskCore(task))
+            try:
+                sleepTime = next(self.taskCore(task))
+            except Exception as e:
+                logging.error(e)
+                sleepTime = 30
+
+
             logging.info(f"attacking! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
 
@@ -291,7 +302,11 @@ class Galaxy(GalaxyCore):
             task['type'] = 1
             task['times'] = self.exploreTimes
             task['from'] = self.exploreFrom
-            sleepTime = next(self.taskCore(task))
+            try:
+                sleepTime = next(self.taskCore(task))
+            except Exception as e:
+                logging.error(e)
+                sleepTime = 30
             logging.info(f"Exploring! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
 
