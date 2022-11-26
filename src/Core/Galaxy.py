@@ -48,6 +48,7 @@ class Galaxy(GalaxyCore):
         self.initialized = False
         try:
             serverLst = showServerList()
+            print("server list:", serverLst)
             self.serverUrlList = serverLst
         except Exception as e:
             logging.warning(e)
@@ -367,6 +368,7 @@ class Galaxy(GalaxyCore):
     # extra function area
 
     def showPlanetId(self):
+        self.login()
         print("最后一位为0是行星，为1是月球")
         url = "game.php?page=buildings"
         result = self._post(url, {})
