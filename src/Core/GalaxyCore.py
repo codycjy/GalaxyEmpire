@@ -121,23 +121,31 @@ class GalaxyCore:
 
     SALT = "b6bd8a93c54cc404c80d5a6833ba12eb"
 
-    def __init__(self, username: str, password: str, server: str):
-        self.username = username
-        self.password = password
-        self.server = server
+    def __init__(self):
+        self.username = None
+        self.password = None
+        self.server = None
         self.ppy_id = None
         self.ssid = None
+        self.proxies = None
         self.planetIdDict = defaultdict(str)
         self.planet = {}
+
+    def getAccount(self,username,password,server):
+        self.username=username
+        self.password=password
+        self.server=server
 
     def startup(self):
         self.login()
 
-    def _post(self, url: str, args: dict={}) -> dict:
+    def _post(self, url: str, args={}) -> dict:
         """
         Everything work with network start in this method
         """
 
+        if args is None:
+            args = {}
         extra_args = {}
         if "login" not in url:
             extra_args = self.getSession()
@@ -149,7 +157,7 @@ class GalaxyCore:
             sys.exit(0)
         logging.debug(url)
         try:
-            req = requests.post(url, headers=headers, data=crypto(url))
+            req = requests.post(url, headers=headers, data=crypto(url),proxies=self.proxies)
             data = json.loads(req.text)
             logging.debug(data)
             if data['status'] != 'error':
@@ -159,10 +167,12 @@ class GalaxyCore:
                 return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
         except json.JSONDecodeError as e:
             logging.warning("JSONDecodeError " + str(e))
-            return {'status': -1, 'err_msg': 'JSONDecodeError' }
-            # sys.exit(0)
+            return {'status': -1, 'err_msg': 'JSONDecodeError'}
         except Exception as e:
             logging.error(str(e))
+            return {'status': -1}
+        except:
+            logging.error("unknown error")
             return {'status': -1}
 
     def generateFleet(self, level):
@@ -186,19 +196,20 @@ class GalaxyCore:
         result = self._post(url, {1: 1})
         if result['status'] == 0:
             loginResult = result['data']
+            logging.debug(loginResult)
         else:
-            logging.warning(result)
-            return {'status': -1}
+            logging.info(result)
+            return {'status': -1, 'err_msg': result.get('err_msg', 'login error')}
         try:
             self.ppy_id = loginResult['ppy_id']
             self.ssid = loginResult['ssid']
         except KeyError:
-            logging.warning("login failed")
-            return {'status': -1}
+            logging.info("login failed")
+            return {'status': -1, 'err_msg': 'Unknown error'}
         logging.info("Login Success")
         return {'status': 0}
 
-    def changePlanet(self, planetId) -> dict:
+    def changePlanet(self, planetId):
         """
         change planet and return planet information.
         """
@@ -222,5 +233,5 @@ class GalaxyCore:
 
 
 if __name__ == "__main__":
-    g = GalaxyCore('username', 'password', 'ze')
+    g = GalaxyCore()
     g.login()

@@ -69,7 +69,8 @@ task['escape'] = ESCAPE
 if __name__ == '__main__':
     target2lst(ATTACKTARGET, attackTargetList)
     target2lst(EXPLORETARGET, exploreTargetList)
-    G = Galaxy(ACCOUNT, PASSWORD, SERVER)
+    G = Galaxy()
+    G.getAccount(ACCOUNT, PASSWORD, SERVER)
     if SHOWID:
         G.showPlanetId()
         sys.exit(0)

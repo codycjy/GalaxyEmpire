@@ -36,19 +36,22 @@ def showServerList() -> dict:  # alpha version function
 
 
 class Galaxy(GalaxyCore):
-    def __init__(self, username: str, password: str, server: str):
-        super().__init__(username, password, server)
+    def __init__(self):
+        super().__init__()
         self.attackLevel = None
         self.fleetOnPlanet = defaultdict(dict)
         self.resourcesOnPlanet = defaultdict()
         self.attackedPlanet = defaultdict(int)
+        self.logger = None
+        self.enableLogger = False
         self._planet = {}
+        self.initialized = False
         try:
             serverLst = showServerList()
             self.serverUrlList = serverLst
         except Exception as e:
             logging.warning(e)
-        self.startup()
+        # self.startup()
         # get all the planet and initialize them
 
     def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):
@@ -68,9 +71,37 @@ class Galaxy(GalaxyCore):
 
         self.fleet = fleetLevel if fleetLevel is not None else self.fleet
 
+    def getTaskNew(self, task: dict):
+        """
+        get task from task generator
+        """
+        self.username = task['meta']['username']
+        self.password = task['meta']['password']
+        self.server = task['meta']['server']
+
+        self.isAttack = task['enable'].get('attack', False)
+        self.isExplore = task['enable'].get('explore', False)
+        self.isEscaping = task['enable'].get('escape', False)
+
+        if self.isAttack:
+            self.attackLevel = task['attack']['level']
+            self.attackTargetList = task['attack']['target']
+            self.attackTimes = task['attack']['times']
+            self.attackFrom = task['attack']['from']
+
+        if self.isExplore:
+            self.exploreLevel = task['explore']['level']
+            self.exploreTargetList = task['explore']['target']
+            self.exploreTimes = task['explore']['times']
+            self.exploreFrom = task['explore']['from']
+
+    def getLogger(self, logger):
+        self.logger = logger
+        self.enableLogger = True
+
     def startup(self):
         self.login()
-        self.updateBuildingInfo()
+        # self.updateBuildingInfo()
 
     def taskCore(self, task):
         """
@@ -86,7 +117,7 @@ class Galaxy(GalaxyCore):
             self.changePlanet(task['from'])
             for _ in range(task['times']):
                 result = self.Attack(task['target'], task['level'])
-                waittime = max(result.get('waittime',0), waittime)
+                waittime = max(result.get('waittime', 0), waittime)
             waittime = max(waittime, 0) + 30
             yield waittime
 
@@ -219,7 +250,7 @@ class Galaxy(GalaxyCore):
         if target:
             self.getEscapeFleet(planet, target)
 
-    def getEscapeFleet(self, planet, destination)->None:
+    def getEscapeFleet(self, planet, destination) -> None:
         url = "game.php?page=my_fleet1"
         __args = {}
 
@@ -287,7 +318,6 @@ class Galaxy(GalaxyCore):
             except Exception as e:
                 logging.error(e)
                 sleepTime = 30
-
 
             logging.info(f"attacking! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
@@ -381,5 +411,5 @@ class Galaxy(GalaxyCore):
 
 
 if __name__ == "__main__":
-    g = Galaxy('', '', '')
+    g = Galaxy()
     g.login()
