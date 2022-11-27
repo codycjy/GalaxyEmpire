@@ -79,21 +79,21 @@ class Galaxy(GalaxyCore):
         self.password = task['meta']['password']
         self.server = task['meta']['server']
 
-        self.isAttack = task['enable'].get('attack', False)
-        self.isExplore = task['enable'].get('explore', False)
-        self.isEscaping = task['enable'].get('escape', False)
+        self.isAttack = task['enabled'].get('attack', False)
+        self.isExplore = task['enabled'].get('explore', False)
+        self.isEscaping = task['enabled'].get('escape', False)
 
         if self.isAttack:
             self.attackLevel = task['attack']['level']
             self.attackTargetList = task['attack']['target']
             self.attackTimes = task['attack']['times']
-            self.attackFrom = task['attack']['from']
+            self.attackFrom = task['attack']['startFrom']
 
         if self.isExplore:
             self.exploreLevel = task['explore']['level']
             self.exploreTargetList = task['explore']['target']
             self.exploreTimes = task['explore']['times']
-            self.exploreFrom = task['explore']['from']
+            self.exploreFrom = task['explore']['startFrom']
 
     def getLogger(self, logger):
         self.logger = logger
@@ -412,5 +412,4 @@ class Galaxy(GalaxyCore):
 
 
 if __name__ == "__main__":
-    g = Galaxy()
-    g.login()
+    pass

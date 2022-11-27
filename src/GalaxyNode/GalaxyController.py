@@ -1,7 +1,7 @@
-from multiprocessing import Process, Pipe
-from collections import defaultdict
-import os
 import configparser
+import os
+from collections import defaultdict
+from multiprocessing import Pipe
 
 import multiprocessing_logging
 
@@ -16,7 +16,7 @@ class GalaxyController:
         self.conns = defaultdict(dict)
         self.cfgBackup = defaultdict(dict)
 
-    def addNode(self, info, needLogin=True):
+    def addNode(self, info, needLoginTest=True):
         conn1, conn2 = Pipe()
         node = GalaxyNode(conn2)
         node.getTaskNew(info)
@@ -24,7 +24,7 @@ class GalaxyController:
         server = info['meta']['server']
         self.cfgBackup[server][info['meta']['username']] = info
 
-        if needLogin:
+        if needLoginTest:
             if testLoginResult['status']:
                 self.nodes[server][info['meta']['username']] = node
                 self.conns[server][info['meta']['username']] = conn1
