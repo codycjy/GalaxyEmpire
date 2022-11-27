@@ -1,3 +1,4 @@
+import logging
 import time
 from multiprocessing import Process, Pipe
 
@@ -15,7 +16,8 @@ class GalaxyNode(Galaxy, Process):
     def ping(self):
         return {'status': True, 'msg': 'pong'}
 
-    def run(self):
+    def start(self):
+        logging.info("Node started")
         self.runTask()
         while True:
             if self.conn.poll():
