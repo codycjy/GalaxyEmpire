@@ -6,7 +6,7 @@ from src.Logger import Logger
 
 
 class GalaxyNode(Galaxy, Process):
-    def __init__(self, conn: Pipe, logger=None ):
+    def __init__(self, conn: Pipe, logger=None):
         Galaxy.__init__(self)  # TEMP use
         Process.__init__(self)
         self.conn = conn

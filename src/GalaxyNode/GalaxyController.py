@@ -3,7 +3,11 @@ from collections import defaultdict
 import os
 import configparser
 
+import multiprocessing_logging
+
 from src.GalaxyNode.GalaxyNode import GalaxyNode
+
+multiprocessing_logging.install_mp_handler()
 
 
 class GalaxyController:
@@ -70,7 +74,6 @@ class GalaxyController:
                 configs.append(self.parseConfig(config))
             except Exception as e:
                 print(e)
-        print(configs)
         return configs
 
     def findNode(self, username, server):
@@ -79,6 +82,7 @@ class GalaxyController:
     def start(self):
         for i in self.nodes:
             for j in self.nodes[i]:
+                print(f"Starting node {j} on {i}")
                 self.nodes[i][j].start()
 
     def stop(self):

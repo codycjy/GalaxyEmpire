@@ -48,7 +48,6 @@ class Galaxy(GalaxyCore):
         self.initialized = False
         try:
             serverLst = showServerList()
-            print("server list:", serverLst)
             self.serverUrlList = serverLst
         except Exception as e:
             logging.warning(e)

@@ -13,7 +13,9 @@ class GalaxyCmd(cmd.Cmd):
     def __init__(self, **kwargs):
         super().__init__()
         self.gc = GalaxyController()
-        self.cfgPath= kwargs.get('path', 'NodeConfigs')
+        self.cfgPath = kwargs.get('path', 'NodeConfigs')
+        self.logger = kwargs.get('logger', None)
+
         if not os.path.exists(self.cfgPath):
             os.mkdir(self.cfgPath)
             print('Config directory not found, created')
@@ -33,8 +35,8 @@ class GalaxyCmd(cmd.Cmd):
         server = input("server:")
         self.manualAddTask()
 
-    def do_autoadd(self,line):
-        self.gc.loadConfigs(self.cfgPath)
+    def do_autoadd(self, line):
+        self.gc.autoGetNode(self.cfgPath)
 
     def do_start(self, line):
         self.gc.start()

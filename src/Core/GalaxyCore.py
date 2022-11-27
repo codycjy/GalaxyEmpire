@@ -127,9 +127,12 @@ class GalaxyCore:
         self.server = None
         self.ppy_id = None
         self.ssid = None
-        self.proxies = None
         self.planetIdDict = defaultdict(str)
         self.planet = {}
+        self.proxies = {
+            'http':None,
+            'https':None
+        }
 
     def getAccount(self,username,password,server):
         self.username=username
