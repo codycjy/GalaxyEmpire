@@ -2,7 +2,6 @@ import time
 from multiprocessing import Process, Pipe
 
 from src.Core.Galaxy import Galaxy
-from src.Logger import Logger
 
 
 class GalaxyNode(Galaxy, Process):
