@@ -85,13 +85,15 @@ class Galaxy(GalaxyCore):
 
         if self.isAttack:
             self.attackLevel = task['attack']['level']
-            self.attackTargetList = task['attack']['target']
+            self.attackTargetList = list(
+                map(lambda x: dict(zip(['galaxy', 'system', 'planet'], x)), task['attack']['target']))
             self.attackTimes = task['attack']['times']
             self.attackFrom = task['attack']['startFrom']
 
         if self.isExplore:
             self.exploreLevel = task['explore']['level']
-            self.exploreTargetList = task['explore']['target']
+            self.exploreTargetList = list(
+                map(lambda x: dict(zip(['galaxy', 'system', 'planet'], x)), task['explore']['target']))
             self.exploreTimes = task['explore']['times']
             self.exploreFrom = task['explore']['startFrom']
 
