@@ -130,14 +130,16 @@ class GalaxyCore:
         self.planetIdDict = defaultdict(str)
         self.planet = {}
         self.proxies = {
-            'http':None,
-            'https':None
+            'http': None,
+            'https': None
         }
+        self.coreType = 0  # 0: galaxy core, 1: galaxy node
+        self.loggingPrefix = ''
 
-    def getAccount(self,username,password,server):
-        self.username=username
-        self.password=password
-        self.server=server
+    def getAccount(self, username, password, server):
+        self.username = username
+        self.password = password
+        self.server = server
 
     def startup(self):
         self.login()
@@ -154,25 +156,36 @@ class GalaxyCore:
             extra_args = self.getSession()
         try:
             args.update(extra_args)
+            logging.debug(f"{self.loggingPrefix} {args}")
             url = self.serverUrlList[self.server] + url + addArgs(args)
         except KeyError as e:
             logging.critical("server wrong " + str(e))
+            logging.critical("exiting...")
             sys.exit(0)
         logging.debug(url)
         try:
-            req = requests.post(url, headers=headers, data=crypto(url),proxies=self.proxies)
+            req = requests.post(url, headers=headers, data=crypto(url), proxies=self.proxies)
             data = json.loads(req.text)
-            logging.debug(data)
             if data['status'] != 'error':
                 return {'status': 0, 'data': data}
             else:
                 logging.warning(data['err_msg'])
                 return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
         except json.JSONDecodeError as e:
-            logging.warning("JSONDecodeError " + str(e))
+            logging.warning(self.loggingPrefix+"JSONDecodeError " + str(e))
             return {'status': -1, 'err_msg': 'JSONDecodeError'}
+        except WindowsError as e:
+            if e.winerror == 10054:
+                logging.warning(self.loggingPrefix+"ConnectionResetError")
+                return {'status': -1, 'err_msg': 'ConnectionResetError'}
+            elif e.winerror == 10060:
+                logging.warning(self.loggingPrefix+"ConnectionTimeout")
+                return {'status': -1, 'err_msg': 'ConnectionTimeout'}
+            else:
+                logging.warning(self.loggingPrefix+"WindowsError " + str(e))
+                return {'status': -1, 'err_msg': 'WindowsError'}
         except Exception as e:
-            logging.error(str(e))
+            logging.error(self.loggingPrefix+str(e))
             return {'status': -1}
         except:
             logging.error("unknown error")
@@ -236,5 +249,4 @@ class GalaxyCore:
 
 
 if __name__ == "__main__":
-    g = GalaxyCore()
-    g.login()
+    pass

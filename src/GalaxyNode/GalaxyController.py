@@ -84,6 +84,7 @@ class GalaxyController:
             for j in self.nodes[i]:
                 print(f"Starting node {j} on {i}")
                 self.nodes[i][j].start()
+        print("All nodes started")
 
     def stop(self):
         for i in self.nodes:
@@ -204,5 +205,4 @@ class GalaxyController:
 
 
 if __name__ == '__main__':
-    gc = GalaxyController()
-    gc.test()
+    pass

@@ -71,13 +71,15 @@ class Galaxy(GalaxyCore):
 
         self.fleet = fleetLevel if fleetLevel is not None else self.fleet
 
-    def getTaskNew(self, task: dict):
+    def getTaskNew(self, task: dict, coreType: int =1):
         """
         get task from task generator
         """
+        self.coreType = coreType
         self.username = task['meta']['username']
         self.password = task['meta']['password']
         self.server = task['meta']['server']
+        self.loggingPrefix = f'[{self.username}@{self.server}] | '
 
         self.isAttack = task['enabled'].get('attack', False)
         self.isExplore = task['enabled'].get('explore', False)
@@ -147,14 +149,12 @@ class Galaxy(GalaxyCore):
         __args = {}
         __args.update(dict(zip(['type', 'mission'], [4, 15] if 50 < level < 100 else [1, 1])))
         if not self.fleet[level]:
-            logging.warning("wrong task, will not attack")
+            logging.warning(self.loggingPrefix+"wrong task, will not attack")
             return
         else:
             __args.update(self.generateFleet(level))
             __args.update(target)
 
-        logging.info(__args)
-        logging.debug(__args)
         result = self._post(url, __args)
         if result['status'] == 0:
             try:
@@ -172,24 +172,25 @@ class Galaxy(GalaxyCore):
         try:
             __args = self.getAttackFleet(target, level)
         except Exception as e:
-            logging.warning(e)
+            logging.warning(self.loggingPrefix+str(e))
             return {'status': -1, 'waittime': 0}
 
-        logging.info('Attack')
+        logging.info(self.loggingPrefix+'Attack')  # need to distinguish attack and explore
         isFailed = True
-        waittime = 0
+        waitTime = 0
         if level > 50:
             __args.update(additional_args)
-        logging.info(__args)
+
         result = self._post(url, __args)
         if result['status'] == 0:
             if result['data']['status'] == 'ok':
-                waittime = (float(result['data']['result']['backtime'])) + 30
+                logging.debug(result['data'])
+                logging.info(self.loggingPrefix+'Attack success')
+                waitTime = (float(result['data']['result']['backtime'])) + 30
                 isFailed = False
 
-        logging.info(__args)
-        logging.info(f"Is failed: {isFailed}")
-        return {'waittime': waittime if not isFailed else 0}
+        logging.info(f"{self.loggingPrefix}Is failed: {isFailed}")
+        return {'waittime': waitTime if not isFailed else 0}
 
     def updateBuildingInfo(self):
         url = "game.php?page=buildings"
@@ -215,20 +216,19 @@ class Galaxy(GalaxyCore):
 
         url = "game.php?page=fleet&action=detected"
         result = self._post(url)
-        logging.debug(result)
         if result['status'] != 0:
             return {'status': -1}
         result = result['data']['result']  # attacking enemies
-        logging.info(result)
+        logging.info(self.loggingPrefix+result)
         self.attackedPlanet.clear()
         self.updateBuildingInfo()
         for i in result:
             target = (i['endGalaxy'], i['endSystem'], i['endPlanet'], i['endType'])
             plannetId = self.planetIdDict[target]
             if not plannetId:
-                logging.warning("wrong planet id")
+                logging.warning(self.loggingPrefix+"wrong planet id")
                 continue
-            logging.info("enemy attacking us" + str(plannetId))
+            logging.info(self.loggingPrefix+"enemy attacking us" + str(plannetId))
             self.attackedPlanet[plannetId] = 1
             result = next(self.taskCore({'type': 2, 'planetId': plannetId, 'enemyFleet': i['FleetList']}))
 
@@ -241,7 +241,7 @@ class Galaxy(GalaxyCore):
         planet.updateResources()
         __args.update(planet.getFleet())
         __args.update({'mission': 4})
-        logging.info(enemyFleet)
+        logging.info(self.loggingPrefix+enemyFleet)
         target = None
         for i in self.planet.items():
             if type(i[0]) == tuple:
@@ -262,7 +262,6 @@ class Galaxy(GalaxyCore):
         __args.update(planet.getFleet())
         __args.update(target)
 
-        logging.debug(__args)
         res = self._post(url, __args)  # get fleet information
         if res['status'] != 0:
             return
@@ -286,8 +285,7 @@ class Galaxy(GalaxyCore):
         url = "game.php?page=fleet3"
         res = self._post(url, __args)  # send fleet
         if res['status'] == 0:
-            logging.info(res['data'])
-        logging.debug(__args)
+            logging.info(self.loggingPrefix+res['data'])
 
     async def Detect(self):
         """
@@ -314,14 +312,14 @@ class Galaxy(GalaxyCore):
             task['type'] = 1
             task['times'] = self.attackTimes
             task['from'] = self.attackFrom
-            logging.debug(task)
+            logging.debug(self.loggingPrefix+task)
             try:
                 sleepTime = next(self.taskCore(task))
             except Exception as e:
                 logging.error(e)
                 sleepTime = 30
 
-            logging.info(f"attacking! waiting for {sleepTime} seconds")
+            logging.info(f"{self.loggingPrefix}attacking! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
 
     async def addExploreTask(self):
@@ -337,7 +335,7 @@ class Galaxy(GalaxyCore):
             try:
                 sleepTime = next(self.taskCore(task))
             except Exception as e:
-                logging.error(e)
+                logging.error(self.loggingPrefix+e)
                 sleepTime = 30
             logging.info(f"Exploring! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
@@ -374,7 +372,7 @@ class Galaxy(GalaxyCore):
         url = "game.php?page=buildings"
         result = self._post(url, {})
         if result['status'] != 0:
-            logging.warning("wrong planet id")
+            logging.warning(f"{self.loggingPrefix}wrong planet id")
             return
         result = result['data']
         for i in result['result']['buildInfo']['result']['Planets'].items():
@@ -396,7 +394,7 @@ class Galaxy(GalaxyCore):
         url = "game.php?page=items&mod=2&type=100000"
 
         if len(target) != 3 or type(target) not in [list, tuple]:
-            logging.warning("target should be a list of length 3")
+            logging.warning(f"{self.loggingPrefix}target should be a list of length 3")
             return
 
         __args = {'id': planetId}
@@ -406,10 +404,10 @@ class Galaxy(GalaxyCore):
         result = self._post(url, __args)
         if result.get('status') == 0:
             if result['data']['status'] != 'ok':
-                logging.error(result['data']['error'])
+                logging.error(self.loggingPrefix+result['data']['error'])
             else:
                 data: dict = result['data']['result']
-                logging.info(f"migrate {data.get('planet_id')} to"
+                logging.info(f"{self.loggingPrefix}migrate {data.get('planet_id')} to"
                              f" {data.get('galaxy')}.{data.get('system')}.{data.get('planet')} success")
 
 
