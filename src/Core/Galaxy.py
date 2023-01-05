@@ -391,9 +391,8 @@ class Galaxy(GalaxyCore):
         if there is, escape
         """
         while True:
-            self.checkEnemy()
             try:
-                pass
+                self.checkEnemy()
             except Exception as e:
                 logging.warning(e)
             await asyncio.sleep(30)
