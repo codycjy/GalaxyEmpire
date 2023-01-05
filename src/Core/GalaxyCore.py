@@ -67,7 +67,9 @@ class GalaxyCore:
                 'satellite': 'ship210', 'lf': 'ship204', 'hf': 'ship205', 'cr': 'ship206',
                 'dr': 'ship215', 'bomb': 'ship211', 'guard': 'ship216'}
 
-    serverUrlList = {'g11': 'http://173.255.250.41/g11/',
+    serverUrlList = {'g13': 'http://173.255.250.41/g13/',
+                     'g12': 'http://173.230.155.34/g12/',
+                     'g11': 'http://173.255.250.41/g11/',
                      'g10': 'http://45.33.39.137/g10/',
                      'g8': 'http://45.33.44.248/g8/',
                      'g9': 'http://173.255.250.41/g9/',
@@ -156,7 +158,6 @@ class GalaxyCore:
             extra_args = self.getSession()
         try:
             args.update(extra_args)
-            logging.debug(f"{self.loggingPrefix} {args}")
             url = self.serverUrlList[self.server] + url + addArgs(args)
         except KeyError as e:
             logging.critical("server wrong " + str(e))
@@ -169,23 +170,27 @@ class GalaxyCore:
             if data['status'] != 'error':
                 return {'status': 0, 'data': data}
             else:
-                logging.warning(data['err_msg'])
-                return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
+                try:
+                    logging.warning(data['err_msg'])
+                    return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
+                except KeyError:
+                    logging.error(data)
+                    return {'status': -1}
         except json.JSONDecodeError as e:
-            logging.warning(self.loggingPrefix+"JSONDecodeError " + str(e))
+            logging.warning(self.loggingPrefix + "JSONDecodeError " + str(e))
             return {'status': -1, 'err_msg': 'JSONDecodeError'}
         except WindowsError as e:
             if e.winerror == 10054:
-                logging.warning(self.loggingPrefix+"ConnectionResetError")
+                logging.warning(self.loggingPrefix + "ConnectionResetError")
                 return {'status': -1, 'err_msg': 'ConnectionResetError'}
             elif e.winerror == 10060:
-                logging.warning(self.loggingPrefix+"ConnectionTimeout")
+                logging.warning(self.loggingPrefix + "ConnectionTimeout")
                 return {'status': -1, 'err_msg': 'ConnectionTimeout'}
             else:
-                logging.warning(self.loggingPrefix+"WindowsError " + str(e))
+                logging.warning(self.loggingPrefix + "WindowsError " + str(e))
                 return {'status': -1, 'err_msg': 'WindowsError'}
         except Exception as e:
-            logging.error(self.loggingPrefix+str(e))
+            logging.error(self.loggingPrefix + str(e))
             return {'status': -1}
         except:
             logging.error("unknown error")
@@ -240,7 +245,7 @@ class GalaxyCore:
                 return data
         try:
             logging.warning(result['err_msg'])
-        except KeyError:  # TODO more exception
+        except KeyError:  
             logging.warning(result)
         finally:
             logging.warning("changePlanet failed, sleep 15s and retry")

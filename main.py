@@ -21,6 +21,10 @@ ESCAPE = 0  # 1 启用逃跑任务 0 关闭逃逸任务
 
 SHOWID = 0  # 1 显示星球ID 0 不显示星球ID 正常使用脚本时请设置为0
 
+DETECT_INTERVAL = 30 # 探测间隔
+ESCAPE_ADVANCE = 60  # 逃跑提前量 建议逃跑提前量大于等于两倍探测间隔
+ALLOW_RECALL = 1  # 1 允许撤回 0 不允许撤回
+
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',  # 日志格式
                     )
@@ -75,6 +79,7 @@ if __name__ == '__main__':
         G.showPlanetId()
         sys.exit(0)
 
+    G.getInfo(escapeInAdvance=ESCAPE_ADVANCE, detectInterval=DETECT_INTERVAL, allowRecall=ALLOW_RECALL)
     G.getTasks(attackTargetList, (ATTACKLEVEL, ATTACKTIMES, ATTACKFROM), exploreTargetList,
                (EXPLORELEVEL, EXPLORETIMES, EXPLOREFROM), task,
                fleet)

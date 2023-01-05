@@ -6,6 +6,7 @@ from src.Core.GalaxyCore import GalaxyCore
 
 class Planet(GalaxyCore):
     def __init__(self, loginInfo):
+        super().__init__()
         self.updateInformation(loginInfo)
         self.fleet = defaultdict(dict)
         self.resources = {}
@@ -30,6 +31,8 @@ class Planet(GalaxyCore):
         update the resources and fleet of the planet
         """
         result = self.changePlanet(self.planetId)
+
+        self.fleet.clear()
         for i in (result['result']['fleetInfo']['FleetsOnPlanet']):
             if i['id'] == 503 or i['id'] == 212:
                 continue
@@ -45,11 +48,14 @@ class Planet(GalaxyCore):
     def getFleet(self) -> dict:
         """
         return the fleet of the planet
+        :return: a dict of fleet
         """
+
         return self.fleet
 
     def getResources(self):
         """
         return the resources of the planet
+        :return: a dict of resources
         """
         return self.resources
