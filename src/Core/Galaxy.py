@@ -13,6 +13,9 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 INF=1e18
 
 
+def intTime():
+    return int(time.time())
+
 def showServerList() -> dict:  # alpha version function
     """
     auto update server list
@@ -116,7 +119,7 @@ class Galaxy(GalaxyCore):
 
     def startup(self):
         self.login()
-        # self.updateBuildingInfo()
+        self.updateBuildingInfo()
 
     def taskCore(self, task):
         """
@@ -272,17 +275,30 @@ class Galaxy(GalaxyCore):
                 self.recallEscape(self.info['escapingFleetID'][i])
                 self.info['arrivingTime'].pop(i)
                 self.info['escapingFleetID'].pop(i)
+            else:
+                logging.info(f"{self.loggingPrefix}Recall disabled, will not recall")
 
+        noArrivingTime = []
         # when enemy will arrive with in 60 seconds, escape
         for i in self.info['arrivingTime'].items():
-            if i[1]-time.time() <6000:
-                logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-time.time()} seconds, escape")
-                result = next(self.taskCore({'type': 2, 'planetId': i[0], 'enemyFleet': self.info['enemyFleet'][i[0]]}))
-                if result == 0:
-                    logging.warning(f"{self.loggingPrefix}Escape failed")
-                    return
-                logging.info(f"{self.loggingPrefix}Escape success for {i[0]} fleet id: {result}")
-                self.info['escapingFleetID'][i[0]] = result
+            if 0 < i[1]-intTime() <6000:
+                if self.info['escapingFleetID'].get(i[0],-1) == -1 :  # or 1 just fot test
+                    logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, escape")
+                    result = next(self.taskCore({'type': 2, 'planetId': i[0], 'enemyFleet': self.info['enemyFleet'][i[0]]}))
+                    if result == 0:
+                        logging.warning(f"{self.loggingPrefix}Escape failed")
+                        return
+                    logging.info(f"{self.loggingPrefix}Escape success for {i[0]} fleet id: {result}")
+                    self.info['escapingFleetID'][i[0]] = result
+                else:
+                    logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, already escaping")
+            elif i[1]-intTime() < 0:
+                logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, already attacked")
+                noArrivingTime.append(i[0])
+
+            for i in noArrivingTime:
+                self.info['arrivingTime'].pop(i)
+
             if i[1]==INF:
                 self.info['arrivingTime'].pop(i[0])
 
@@ -378,6 +394,7 @@ class Galaxy(GalaxyCore):
         else:
             logging.debug(f"{self.loggingPrefix} ship available")
 
+
         res = self._post(url, __args)  # send fleet
         if res['status'] == 0:
             logging.info(self.loggingPrefix + str(res['data']))
@@ -460,7 +477,7 @@ class Galaxy(GalaxyCore):
         await asyncio.gather(*taskLst)
 
     def runTask(self):
-        self.login()
+        self.startup()
         asyncio.run(self.gatherTask())
 
     # extra function area
