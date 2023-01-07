@@ -125,7 +125,7 @@ class Galaxy(GalaxyCore):
         """
         all task based on task Core func including relogin
         0:relogin 1:attack&&explore 2:escape
-        3:recall
+        3:recall 4:runFunc
         """
 
         if task['type'] == 0:
@@ -145,6 +145,8 @@ class Galaxy(GalaxyCore):
         elif task['type'] == 3:
             self.recallFleet(task['fleetId'])
             yield 0
+        elif task['type'] == 4:
+            yield task['func']()
 
     def relogin(self):
         """
@@ -281,7 +283,7 @@ class Galaxy(GalaxyCore):
         noArrivingTime = []
         # when enemy will arrive with in 60 seconds, escape
         for i in self.info['arrivingTime'].items():
-            if 0 < i[1]-intTime() <6000:
+            if 0 < i[1]-intTime() < self.info['escapeInAdvance']:
                 if self.info['escapingFleetID'].get(i[0],-1) == -1 :  # or 1 just fot test
                     logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, escape")
                     result = next(self.taskCore({'type': 2, 'planetId': i[0], 'enemyFleet': self.info['enemyFleet'][i[0]]}))
@@ -332,7 +334,7 @@ class Galaxy(GalaxyCore):
         """
         __args = {}
         planet = self.planet[planetId]
-        planet.updateResources()
+        next(self.taskCore({"task":4,"func":planet.updateResources}))
         __args.update(planet.getFleet())
         __args.update({'mission': 4})
         logging.info(self.loggingPrefix + str(enemyFleet))
@@ -355,7 +357,7 @@ class Galaxy(GalaxyCore):
 
         target = {'galaxy': destination[0], 'system': destination[1], 'planet': destination[2], 'type': destination[3]}
 
-        planet.updateResources()
+        next(self.taskCore({"task":4,"func":planet.updateResources}))
         __args.update(dict(zip(['type', 'mission', 'speed'], [1, 4, 1])))
         __args.update(planet.getFleet())
         __args.update(target)
@@ -412,7 +414,7 @@ class Galaxy(GalaxyCore):
                 self.checkEnemy()
             except Exception as e:
                 logging.warning(e)
-            await asyncio.sleep(30)
+            await asyncio.sleep(self.info['detectInterval'])
 
     async def addAttackTask(self):
         """Generates a new attack task"""
@@ -434,7 +436,7 @@ class Galaxy(GalaxyCore):
                 logging.error(e)
                 sleepTime = 30
 
-            logging.info(f"{self.loggingPrefix}attacking! waiting for {sleepTime} seconds")
+            logging.info(f"{self.loggingPrefix}attacking! waiting for {sleepTime} seconds")  # TODO identify success or not
             await asyncio.sleep(sleepTime)
 
     async def addExploreTask(self):
