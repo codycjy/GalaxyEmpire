@@ -26,7 +26,7 @@ ESCAPE_ADVANCE = 60  # 逃跑提前量 建议逃跑提前量大于等于两倍�
 ALLOW_RECALL = 1  # 1 允许撤回 0 不允许撤回
 
 logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',  # 日志格式
+                    format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',  # 日志格式
                     )
 fleet = {
     20: defaultdict(int, {
