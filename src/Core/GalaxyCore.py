@@ -170,6 +170,10 @@ class GalaxyCore:
             if data['status'] != 'error':
                 return {'status': 0, 'data': data}
             else:
+                if data['err_code'] == 111:
+                    logging.info(f"{self.loggingPrefix}session expired, relogin")
+                    self.login()
+                    return self._post(url, args)
                 try:
                     logging.warning(data['err_msg'])
                     return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
