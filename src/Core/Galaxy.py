@@ -60,6 +60,12 @@ class Galaxy(GalaxyCore):
         # self.startup()
         # get all the planet and initialize them
 
+    def escapeParamsInit(self):
+        if not self.info['detectInterval']:
+            self.info['detectInterval']=30
+        if not self.info['escapeInAdvance']:
+            self.info['escapeInAdvance']=60
+
     def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):
         self.attackLevel = attackLevel[0]
         self.attackTargetList = attackTargetList
@@ -76,10 +82,7 @@ class Galaxy(GalaxyCore):
         self.isEscaping = taskEnabled['escape']
 
         self.fleet = fleetLevel if fleetLevel is not None else self.fleet
-        if not self.info['detectInterval']:
-            self.info['detectInterval']=30
-        if not self.info['escapeInAdvance']:
-            self.info['escapeInAdvance']=60
+        self.escapeParamsInit()
 
     def getTaskNew(self, task: dict, coreType: int = 1):
         """
@@ -108,6 +111,7 @@ class Galaxy(GalaxyCore):
                 map(lambda x: dict(zip(['galaxy', 'system', 'planet'], x)), task['explore']['target']))
             self.exploreTimes = task['explore']['times']
             self.exploreFrom = task['explore']['startFrom']
+        self.escapeParamsInit()
 
     def getLogger(self, logger):
         self.logger = logger
