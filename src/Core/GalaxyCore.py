@@ -7,6 +7,7 @@ from collections import defaultdict
 from arguments import SALT
 import requests
 
+from src.Logger.Logger import GalaxyLogger
 
 def crypto(url, opt=''):
     opt_w = opt + SALT
@@ -143,6 +144,13 @@ class GalaxyCore:
         self.password = password
         self.server = server
 
+
+    def setLogger(self, logger:GalaxyLogger|None,level=logging.INFO):
+        if logger:
+            self.logger = logger
+        else:
+            self.logger= GalaxyLogger('./logs/',level=level,name=f'{self.username}@{self.server}')
+
     def startup(self):
         self.login()
 
@@ -158,46 +166,52 @@ class GalaxyCore:
             extra_args = self.getSession()
         try:
             args.update(extra_args)
-            url = self.serverUrlList[self.server] + url + addArgs(args)
-        except KeyError as e:
-            logging.critical("server wrong " + str(e))
-            logging.critical("exiting...")
+            serverUrl=self.serverUrlList.get(self.server,None)
+            if serverUrl is None:
+                raise InvalidServer(self.server)
+
+            url =serverUrl + url + addArgs(args)
+        except InvalidServer as e:
+            self.logger.error(e)
+            self.logger.critical("exiting...")
             sys.exit(0)
-        logging.debug(url)
+
         try:
+            self.logger.log(5, "POST: " + url)
             req = requests.post(url, headers=headers, data=crypto(url), proxies=self.proxies)
             data = json.loads(req.text)
+            self.logger.log(5, f"RESPONSE:  {data}")
             if data['status'] != 'error':
                 return {'status': 0, 'data': data}
             else:
                 if data['err_code'] == 111:
-                    logging.info(f"{self.loggingPrefix}session expired, relogin")
+                    self.logger.info(f"session expired, relogin")
                     self.login()
                     return self._post(url, args)
                 try:
-                    logging.warning(data['err_msg'])
+                    self.logger.warning(data['err_msg'])
                     return {'status': -1, 'err_msg': data['err_msg'], 'err_code': data['err_code']}
                 except KeyError:
-                    logging.error(data)
+                    self.logger.error(data)
                     return {'status': -1}
         except json.JSONDecodeError as e:
-            logging.warning(self.loggingPrefix + "JSONDecodeError " + str(e))
+            self.logger.warning(f"JSONDecodeError {e}" )
             return {'status': -1, 'err_msg': 'JSONDecodeError'}
         except WindowsError as e:
             if e.winerror == 10054:
-                logging.warning(self.loggingPrefix + "ConnectionResetError")
+                self.logger.warning("ConnectionResetError")
                 return {'status': -1, 'err_msg': 'ConnectionResetError'}
             elif e.winerror == 10060:
-                logging.warning(self.loggingPrefix + "ConnectionTimeout")
+                self.logger.warning("ConnectionTimeout")
                 return {'status': -1, 'err_msg': 'ConnectionTimeout'}
             else:
-                logging.warning(self.loggingPrefix + "WindowsError " + str(e))
+                self.logger.warning(f"WindowsError {e}"  )
                 return {'status': -1, 'err_msg': 'WindowsError'}
         except Exception as e:
-            logging.error(self.loggingPrefix + str(e))
+            self.logger.error(e)
             return {'status': -1}
         except:
-            logging.error("unknown error")
+            self.logger.error("unknown error")
             return {'status': -1}
 
     def generateFleet(self, level):
@@ -221,17 +235,17 @@ class GalaxyCore:
         result = self._post(url, {1: 1})
         if result['status'] == 0:
             loginResult = result['data']
-            logging.debug(loginResult)
+            self.logger.debug(loginResult)
         else:
-            logging.info(result)
+            self.logger.info(result)
             return {'status': -1, 'err_msg': result.get('err_msg', 'login error')}
         try:
             self.ppy_id = loginResult['ppy_id']
             self.ssid = loginResult['ssid']
         except KeyError:
-            logging.info("login failed")
+            self.logger.info("login failed")
             return {'status': -1, 'err_msg': 'Unknown error'}
-        logging.info("Login Success")
+        self.logger.info("Login Success")
         return {'status': 0}
 
     def changePlanet(self, planetId):
@@ -241,20 +255,27 @@ class GalaxyCore:
         self.login()
         url = f'game.php?page=buildings&mode='
         args = {"cp": planetId}
-        logging.info('changePlanet: ' + str(planetId))
+        self.logger.info('changePlanet: ' + str(planetId))
         result = self._post(url, args)
         if result['status'] == 0:
             data = result.get('data')
             if data:
                 return data
         try:
-            logging.warning(result['err_msg'])
+            self.logger.warning(result['err_msg'])
         except KeyError:  
-            logging.warning(result)
+            self.logger.warning(result)
         finally:
-            logging.warning("changePlanet failed, sleep 15s and retry")
+            self.logger.warning("changePlanet failed, sleep 15s and retry")
             time.sleep(15)
             return self.changePlanet(planetId)
+
+
+class InvalidServer(Exception):
+    def __init__(self,server,message="Invalid server"):
+        self.server=server
+        self.message=f"{message} {server} "
+        super().__init__(self.message)
 
 
 if __name__ == "__main__":

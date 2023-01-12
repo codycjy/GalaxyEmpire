@@ -2,24 +2,30 @@ import configparser
 import os
 from collections import defaultdict
 from multiprocessing import Pipe
+import logging
 
-import multiprocessing_logging
-
+from src.Core.GalaxyCore import GalaxyCore
 from src.GalaxyNode.GalaxyNode import GalaxyNode
-
-multiprocessing_logging.install_mp_handler()
+from src.Logger.Logger import GalaxyLogger
 
 
 class GalaxyController:
-    def __init__(self):
+    def __init__(self,**kwargs):
         self.nodes = defaultdict(dict)
         self.conns = defaultdict(dict)
         self.cfgBackup = defaultdict(dict)
+        self.defaultFleet=GalaxyCore.fleet
+        self.loggingPath=kwargs.get("loggingPath",'./logs')
+        self.loggingLevel=kwargs.get("loggingLevel",logging.DEBUG)
 
     def addNode(self, info, needLoginTest=True):
         conn1, conn2 = Pipe()
         node = GalaxyNode(conn2)
         node.getTaskNew(info)
+        print(info['loggingPath'],info['loggingLevel'],f"{info['meta']['username']}@{info['meta']['server']}")
+        logger=GalaxyLogger(info['loggingPath'],info['loggingLevel'],f"{info['meta']['username']}@{info['meta']['server']}")
+        node.setLogger(logger)
+        node.fleet=self.defaultFleet
         testLoginResult = node.testLogin()
         server = info['meta']['server']
         self.cfgBackup[server][info['meta']['username']] = info
@@ -69,11 +75,12 @@ class GalaxyController:
             print("Warning! No config file found")
         config = configparser.ConfigParser()
         for i in configPath:
-            try:
-                config.read(cfgPath + f'/{i}')
-                configs.append(self.parseConfig(config))
-            except Exception as e:
-                print(e)
+            if i.endswith('.ini'):
+                try:
+                    config.read(cfgPath + f'/{i}')
+                    configs.append(self.parseConfig(config))
+                except Exception as e:
+                    print(e)
         return configs
 
     def findNode(self, username, server):
@@ -101,6 +108,8 @@ class GalaxyController:
         nodeList = self.loadConfigs(path)
         if nodeList:
             for i in self.loadConfigs(path):
+                i['loggingPath']=self.loggingPath
+                i['loggingLevel']=self.loggingLevel
                 self.addNode(i)
 
     def parseConfig(self, config):  # TODO rewrite task with dict

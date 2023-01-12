@@ -16,7 +16,7 @@ INF=1e18
 def intTime():
     return int(time.time())
 
-def showServerList() -> dict:  # alpha version function
+def showServerList() -> dict:  # seem useless presently
     """
     auto update server list
     :return: server list
@@ -43,22 +43,13 @@ def showServerList() -> dict:  # alpha version function
 class Galaxy(GalaxyCore):
     def __init__(self):
         super().__init__()
-        self.attackLevel = None
+        self.attackLevel = 0
         self.fleetOnPlanet = defaultdict(dict)
         self.resourcesOnPlanet = defaultdict()
         self.planetInDanger =  []
-        self.logger = None
-        self.enableLogger = False
         self._planet = {}
         self.initialized = False
         self.info = defaultdict(dict)
-        try:
-            serverLst = showServerList()
-            self.serverUrlList = serverLst
-        except Exception as e:
-            logging.warning(e)
-        # self.startup()
-        # get all the planet and initialize them
 
     def escapeParamsInit(self):
         if not self.info['detectInterval']:
@@ -66,7 +57,7 @@ class Galaxy(GalaxyCore):
         if not self.info['escapeInAdvance']:
             self.info['escapeInAdvance']=60
 
-    def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):
+    def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):  # TODO deprecated in the future
         self.attackLevel = attackLevel[0]
         self.attackTargetList = attackTargetList
         self.attackTimes = attackLevel[1]
@@ -113,15 +104,12 @@ class Galaxy(GalaxyCore):
             self.exploreFrom = task['explore']['startFrom']
         self.escapeParamsInit()
 
-    def getLogger(self, logger):
-        self.logger = logger
-        self.enableLogger = True
-
     def getInfo(self,**kwargs):
         for i in kwargs:
             self.info[i]=kwargs[i]
 
     def startup(self):
+        if not self.logger:self.setLogger(logger=None)
         self.login()
         self.updateBuildingInfo()
 
@@ -171,7 +159,7 @@ class Galaxy(GalaxyCore):
         __args = {}
         __args.update(dict(zip(['type', 'mission'], [4, 15] if 50 < level < 100 else [1, 1])))
         if not self.fleet[level]:
-            logging.warning(self.loggingPrefix + "wrong task, will not attack")
+            self.logger.warning("wrong task, will not attack")
             return {}
         else:
             __args.update(self.generateFleet(level))
@@ -194,10 +182,10 @@ class Galaxy(GalaxyCore):
         try:
             __args = self.getAttackFleet(target, level)
         except Exception as e:
-            logging.warning(self.loggingPrefix + str(e))
+            self.logger.warning(e)
             return {'status': -1, 'waittime': 0}
 
-        logging.info(self.loggingPrefix + 'Attack')  # need to distinguish attack and explore
+        self.logger.info(f'{"Attacking" if level<50 else "Exploring"} to {target}')  # need to distinguish attack and explore
         isFailed = True
         waitTime = 0
         if level > 50:
@@ -206,12 +194,12 @@ class Galaxy(GalaxyCore):
         result = self._post(url, __args)
         if result['status'] == 0:
             if result['data']['status'] == 'ok':
-                logging.debug(result['data'])
-                logging.info(self.loggingPrefix + 'Attack success')
+                self.logger.debug(result['data'])
+                self.logger.info(f"{'Attack' if level<50 else 'Explore'} to {target} success")
                 waitTime = (float(result['data']['result']['backtime'])) + 30
                 isFailed = False
 
-        logging.info(f"{self.loggingPrefix}Is failed: {isFailed}")
+        self.logger.warning(f"{target} {'attack' if level<50 else 'explore'} failed")
         return {'waittime': waitTime if not isFailed else 0}
 
     def updateBuildingInfo(self):
@@ -245,13 +233,14 @@ class Galaxy(GalaxyCore):
 
         result = result['data']['result']  # attacking enemies
         if not result:
-            logging.info(self.loggingPrefix + "No enemy attacking")
+            self.logger.info("No enemy attacking us")
 
-        logging.debug(f"{self.loggingPrefix}raw attacking result: {result}")
+        self.logger.debug(f"raw attacking result: {result}")
+
         newPlanetInDanger = []
-
         planetInDanger= defaultdict(int)
         enemyFleet = {}
+
         for i in result:
             target = (i['endGalaxy'], i['endSystem'], i['endPlanet'], i['endType'])
             plannetId = self.planetIdDict[target]
@@ -270,35 +259,38 @@ class Galaxy(GalaxyCore):
             if i not in self.planetInDanger:
                 addedPlanetInDanger.append(i)
         self.planetInDanger = newPlanetInDanger
-        logging.info(self.loggingPrefix + f"Planet no longer in danger: {planetNotInDanger}")
-        logging.info(self.loggingPrefix + f"New Planet in danger: {addedPlanetInDanger}")
+        self.logger.info(f"Planet no longer in danger: {planetNotInDanger}")
+
+        self.logger.info(f"Planet in danger: {addedPlanetInDanger}")
+
+
 
         recalledFleet = []
         noArrivingTime = []
 
         for i in planetNotInDanger:
-            logging.info(f"{self.loggingPrefix}Planet {i} no longer in danger, cancel escape")
+            self.logger.info(f"Planet {i} no longer in danger, cancel escape")
             if self.info['enableRecall'] != 0:
                 self.recallEscape(self.info['escapingFleetID'][i])
                 recalledFleet.append(i)
             else:
-                logging.info(f"{self.loggingPrefix}Recall disabled, will not recall")
+                self.logger.info(f"Recall disabled, will not recall")
 
         # when enemy will arrive with in 60 seconds, escape
         for i in self.info['arrivingTime'].items():
             if 0 < i[1]-intTime() < self.info['escapeInAdvance']:
                 if self.info['escapingFleetID'].get(i[0],-1) == -1 :  # or 1 just fot test
-                    logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, escape")
+                    self.logger.info(f" {i[0]} will be attacked in {i[1]-intTime()} seconds, escape")
                     result = next(self.taskCore({'type': 2, 'planetId': i[0], 'enemyFleet': self.info['enemyFleet'][i[0]]}))
                     if result == 0:
-                        logging.warning(f"{self.loggingPrefix}Escape failed")
+                        self.logger.warning(f"{i[0]} Escape failed")
                         return
-                    logging.info(f"{self.loggingPrefix}Escape success for {i[0]} fleet id: {result}")
+                    self.logger.info(f"{i[0]} escape success.  Fleet id: {result}")
                     self.info['escapingFleetID'][i[0]] = result
                 else:
-                    logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, already escaping")
+                    self.logger.info(f"{i[0]} will be attacked in {i[1]-intTime()} seconds, already escaping")
             elif i[1]-intTime() < 0:
-                logging.info(f"{self.loggingPrefix} {i[0]} will be attacked in {i[1]-intTime()} seconds, already attacked")
+                self.logger.info(f" {i[0]} will be attacked in {i[1]-intTime()} seconds, already attacked")
                 noArrivingTime.append(i[0])
 
             for j in noArrivingTime:
@@ -324,10 +316,10 @@ class Galaxy(GalaxyCore):
         __args = {'fleetID': fleetId}
         result = self._post(url, __args)
         if result['status'] == 0:
-            logging.info(self.loggingPrefix + 'Recall success')
+            self.logger.info(f'{fleetId} Recall success')
             return 0
         else:
-            logging.info(self.loggingPrefix + 'Recall failed')
+            self.logger.warning(f'{fleetId}Recall failed')
             return 1
 
 
@@ -350,7 +342,7 @@ class Galaxy(GalaxyCore):
         next(self.taskCore({"type":4,"func":planet.updateResources}))
         __args.update(planet.getFleet())
         __args.update({'mission': 4})
-        logging.info(self.loggingPrefix + str(enemyFleet))
+        self.logger.info(enemyFleet)
         target = None
         for i in self.planet.items():
             if type(i[0]) == tuple:
@@ -364,7 +356,7 @@ class Galaxy(GalaxyCore):
             return 0
 
 
-    def getEscapeFleet(self, planet, destination) -> int:
+    def getEscapeFleet(self, planet:Planet, destination) -> int:
         url = "game.php?page=my_fleet1"
         __args = {}
 
@@ -402,17 +394,17 @@ class Galaxy(GalaxyCore):
             if i.startswith('ship'):
                 noShip = False
                 break
-        logging.debug(f"{self.loggingPrefix} {__args} {noShip}")
+        self.logger.debug(f" {__args} {noShip}")
         if noShip:
-            logging.info(f"{self.loggingPrefix} no ship available")
+            self.logger.info(f"{planet.getInformation()[0]} no ship available")
             return 0
         else:
-            logging.debug(f"{self.loggingPrefix}{planet.planetId} ship available")   
+            self.logger.debug(f"{planet.getInformation()[0]} ship available")   
 
 
         res = self._post(url, __args)  # send fleet
         if res['status'] == 0:
-            logging.info(self.loggingPrefix + str(res['data']))
+            self.logger.info( res['data'])
             return int(res['data']['result']['id'])
         else:
             return 0
@@ -426,7 +418,7 @@ class Galaxy(GalaxyCore):
             try:
                 self.checkEnemy()
             except Exception as e:
-                logging.warning(e)
+                self.logger.error(e)
             await asyncio.sleep(self.info['detectInterval'])
 
     async def addAttackTask(self):
@@ -442,14 +434,14 @@ class Galaxy(GalaxyCore):
             task['type'] = 1
             task['times'] = self.attackTimes
             task['from'] = self.attackFrom
-            logging.debug(self.loggingPrefix + str(task))
+            self.logger.debug(task)
             try:
                 sleepTime = next(self.taskCore(task))
             except Exception as e:
-                logging.error(e)
+                self.logger.error(e)
                 sleepTime = 30
 
-            logging.info(f"{self.loggingPrefix}attacking! waiting for {sleepTime} seconds")  # TODO identify success or not
+            self.logger.info(f"{task['from']} attacking! waiting for {sleepTime} seconds")  # TODO identify success or not
             await asyncio.sleep(sleepTime)
 
     async def addExploreTask(self):
@@ -465,9 +457,9 @@ class Galaxy(GalaxyCore):
             try:
                 sleepTime = next(self.taskCore(task))
             except Exception as e:
-                logging.error(f"{self.loggingPrefix} {e}")
+                self.logger.error(e)
                 sleepTime = 30
-            logging.info(f"Exploring! waiting for {sleepTime} seconds")
+            self.logger.info(f"{task['from']} exploring! waiting for {sleepTime} seconds")
             await asyncio.sleep(sleepTime)
 
     def asyncTaskGenerator(self):
@@ -503,7 +495,7 @@ class Galaxy(GalaxyCore):
         url = "game.php?page=buildings"
         result = self._post(url, {})
         if result['status'] != 0:
-            logging.warning(f"{self.loggingPrefix} wrong planet id")
+            self.logger.warning(f"Wrong planet id")
             return
         result = result['data']
         for i in result['result']['buildInfo']['result']['Planets'].items():
@@ -512,6 +504,7 @@ class Galaxy(GalaxyCore):
                 map(int,
                     [data['galaxy'], data['system'], data['planet'], data['planet_type'] == '3']))
             print(i[0], self.planet[i[0]])
+
 
     def migratePlanet(self, planetId, target):
         """
@@ -525,7 +518,7 @@ class Galaxy(GalaxyCore):
         url = "game.php?page=items&mod=2&type=100000"
 
         if len(target) != 3 or type(target) not in [list, tuple]:
-            logging.warning(f"{self.loggingPrefix}target should be a list of length 3")
+            self.logger.warning(f"target should be a list of length 3, your input is {len(target)}")
             return
 
         __args = {'id': planetId}
@@ -535,10 +528,10 @@ class Galaxy(GalaxyCore):
         result = self._post(url, __args)
         if result.get('status') == 0:
             if result['data']['status'] != 'ok':
-                logging.error(f"{self.loggingPrefix} {result['data']['error']}")
+                self.logger.error(f"{result['data']['error']}")
             else:
                 data: dict = result['data']['result']
-                logging.info(f"{self.loggingPrefix}migrate {data.get('planet_id')} to"
+                self.logger.info(f"Migrate {data.get('planet_id')} to"
                              f" {data.get('galaxy')}.{data.get('system')}.{data.get('planet')} success")
 
 

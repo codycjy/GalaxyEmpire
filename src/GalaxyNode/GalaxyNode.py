@@ -26,13 +26,12 @@ class GalaxyNode(Galaxy, Process):
     def sendMsg(self, msg):
         self.conn.send(msg)
 
-    def queryHandler(self, query):
+    def queryHandler(self, query): # TODO
         if query == "ping":
             return self.ping()
-        print(query)
 
     def testLogin(self):
-        print("Testing login")
+        print(f"Testing login for {self.server}@{self.username}")
         loginResult = self.login()
         if loginResult['status'] == 0:
             return {'status': True, 'msg': 'Login successfully'}
