@@ -125,18 +125,18 @@ class GalaxyCore:
     SALT = "b6bd8a93c54cc404c80d5a6833ba12eb"
 
     def __init__(self):
-        self.username = None
-        self.password = None
-        self.server = None
-        self.ppy_id = None
-        self.ssid = None
+        self.username = "" 
+        self.password = ""
+        self.server = "" 
+        self.ppy_id = "" 
+        self.ssid = ""
         self.planetIdDict = defaultdict(str)
         self.planet = {}
         self.proxies = {
-            'http': None,
-            'https': None
+            'http': "",
         }
         self.coreType = 0  # 0: galaxy core, 1: galaxy node
+        self.logger=None
         self.loggingPrefix = ''
 
     def getAccount(self, username, password, server):
@@ -145,13 +145,16 @@ class GalaxyCore:
         self.server = server
 
 
-    def setLogger(self, logger:GalaxyLogger|None,level=logging.INFO):
+    def setLogger(self, logger: GalaxyLogger | None, level=logging.INFO):
         if logger:
             self.logger = logger
         else:
-            self.logger= GalaxyLogger('./logs/',level=level,name=f'{self.username}@{self.server}')
+            self.logger = GalaxyLogger( './logs/', 
+                                       level=level, 
+                                       name=f'{self.username}@{self.server}')
 
     def startup(self):
+        self.setLogger(None)
         self.login()
 
     def _post(self, url: str, args={}) -> dict:
@@ -166,11 +169,11 @@ class GalaxyCore:
             extra_args = self.getSession()
         try:
             args.update(extra_args)
-            serverUrl=self.serverUrlList.get(self.server,None)
+            serverUrl = self.serverUrlList.get(self.server, None)
             if serverUrl is None:
                 raise InvalidServer(self.server)
 
-            url =serverUrl + url + addArgs(args)
+            url = serverUrl + url + addArgs(args)
         except InvalidServer as e:
             self.logger.error(e)
             self.logger.critical("exiting...")
@@ -178,7 +181,8 @@ class GalaxyCore:
 
         try:
             self.logger.log(5, "POST: " + url)
-            req = requests.post(url, headers=headers, data=crypto(url), proxies=self.proxies)
+            req = requests.post(url, headers=headers,
+                                data=crypto(url), proxies=self.proxies)
             data = json.loads(req.text)
             self.logger.log(5, f"RESPONSE:  {data}")
             if data['status'] != 'error':
@@ -195,7 +199,7 @@ class GalaxyCore:
                     self.logger.error(data)
                     return {'status': -1}
         except json.JSONDecodeError as e:
-            self.logger.warning(f"JSONDecodeError {e}" )
+            self.logger.warning(f"JSONDecodeError {e}")
             return {'status': -1, 'err_msg': 'JSONDecodeError'}
         except WindowsError as e:
             if e.winerror == 10054:
@@ -205,7 +209,7 @@ class GalaxyCore:
                 self.logger.warning("ConnectionTimeout")
                 return {'status': -1, 'err_msg': 'ConnectionTimeout'}
             else:
-                self.logger.warning(f"WindowsError {e}"  )
+                self.logger.warning(f"WindowsError {e}")
                 return {'status': -1, 'err_msg': 'WindowsError'}
         except Exception as e:
             self.logger.error(e)
@@ -263,7 +267,7 @@ class GalaxyCore:
                 return data
         try:
             self.logger.warning(result['err_msg'])
-        except KeyError:  
+        except KeyError:
             self.logger.warning(result)
         finally:
             self.logger.warning("changePlanet failed, sleep 15s and retry")
@@ -272,9 +276,9 @@ class GalaxyCore:
 
 
 class InvalidServer(Exception):
-    def __init__(self,server,message="Invalid server"):
-        self.server=server
-        self.message=f"{message} {server} "
+    def __init__(self, server, message="Invalid server"):
+        self.server = server
+        self.message = f"{message} {server} "
         super().__init__(self.message)
 
 
