@@ -216,6 +216,7 @@ class Galaxy(GalaxyCore):
                 planetInformation.update({'server': self.server, 'planetId': i[0], 'position': planet,
                                           'username': self.username, 'password': self.password})
                 self.planet[i[0]] = Planet(planetInformation)
+                self.planet[i[0]].setLogger(self.logger)
 
     def checkEnemy(self) -> None:
         """
@@ -276,6 +277,7 @@ class Galaxy(GalaxyCore):
             else:
                 self.logger.info(f"Recall disabled, will not recall")
 
+            noArrivingTime.append(i)
         # when enemy will arrive with in 60 seconds, escape
         for i in self.info['arrivingTime'].items():
             if 0 < i[1]-intTime() < self.info['escapeInAdvance']:
@@ -293,14 +295,14 @@ class Galaxy(GalaxyCore):
                 self.logger.info(f" {i[0]} will be attacked in {i[1]-intTime()} seconds, already attacked")
                 noArrivingTime.append(i[0])
 
-            for j in noArrivingTime:
-                self.info['arrivingTime'].pop(j)
 
             if i[1]==INF:
                 self.info['arrivingTime'].pop(i[0])
+        for i in noArrivingTime:
+            self.info['arrivingTime'].pop(i)
 
-            for j in recalledFleet:
-                self.info['escapingFleetID'].pop(j)
+        for i in recalledFleet:
+            self.info['escapingFleetID'].pop(i)
 
 
 
