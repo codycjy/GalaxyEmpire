@@ -136,7 +136,6 @@ class GalaxyCore:
             'http': "",
         }
         self.coreType = 0  # 0: galaxy core, 1: galaxy node
-        self.logger=None
         self.loggingPrefix = ''
 
     def getAccount(self, username, password, server):
@@ -150,7 +149,7 @@ class GalaxyCore:
             self.logger = logger
         else:
             self.logger = GalaxyLogger( './logs/', 
-                                       level=level, 
+                                       level=level,
                                        name=f'{self.username}@{self.server}')
 
     def startup(self):
