@@ -25,7 +25,7 @@ class GalaxyCmd(cmd.Cmd):
         if not os.path.exists(self.cfgPath):
             os.mkdir(self.cfgPath)
             print('Config directory not found, created')
-            # TODO create fleet json
+            # TODO: create fleet json
             with open(f"{self.cfgPath}/fleet.json", 'w') as f:
                 f.write(json.dumps(GalaxyCore.fleet, indent=4))
             sys.exit()
@@ -47,7 +47,7 @@ class GalaxyCmd(cmd.Cmd):
             self.gc.defaultFleet = fleet
 
         self.needTestLogin = kwargs.get('enable_test_login', True)
-        # TODO add logging path
+        # TODO: add logging path
 
     def do_init(self, line=None):
         print("Controller initialized")
@@ -94,7 +94,7 @@ class GalaxyCmd(cmd.Cmd):
         sys.exit()
 
     def manualAddTask(self):
-        pass  # TODO complete it later low priority
+        pass  # TODO: complete it later low priority
 
     def cmdloop(self, **kwargs):
         while True:

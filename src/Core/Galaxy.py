@@ -57,7 +57,7 @@ class Galaxy(GalaxyCore):
         if not self.info['escapeInAdvance']:
             self.info['escapeInAdvance']=60
 
-    def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):  # TODO deprecated in the future
+    def getTasks(self, attackTargetList, attackLevel, exploreTargetList, exploreLevel, taskEnabled, fleetLevel=None):  # TODO: deprecated in the future
         self.attackLevel = attackLevel[0]
         self.attackTargetList = attackTargetList
         self.attackTimes = attackLevel[1]
@@ -278,6 +278,8 @@ class Galaxy(GalaxyCore):
                 self.logger.info(f"Recall disabled, will not recall")
 
             noArrivingTime.append(i)
+        for i in noArrivingTime:
+            self.info['arrivingTime'].pop(i)
         # when enemy will arrive with in 60 seconds, escape
         for i in self.info['arrivingTime'].items():
             if 0 < i[1]-intTime() < self.info['escapeInAdvance']:
@@ -298,8 +300,6 @@ class Galaxy(GalaxyCore):
 
             if i[1]==INF:
                 self.info['arrivingTime'].pop(i[0])
-        for i in noArrivingTime:
-            self.info['arrivingTime'].pop(i)
 
         for i in recalledFleet:
             self.info['escapingFleetID'].pop(i)
@@ -421,6 +421,8 @@ class Galaxy(GalaxyCore):
                 self.checkEnemy()
             except Exception as e:
                 self.logger.error(e)
+                import traceback
+                traceback.print_exc()
             await asyncio.sleep(self.info['detectInterval'])
 
     async def addAttackTask(self):
@@ -443,7 +445,7 @@ class Galaxy(GalaxyCore):
                 self.logger.error(e)
                 sleepTime = 30
 
-            self.logger.info(f"{task['from']} attacking! waiting for {sleepTime} seconds")  # TODO identify success or not
+            self.logger.info(f"{task['from']} attacking! waiting for {sleepTime} seconds")  # TODO: identify success or not
             await asyncio.sleep(sleepTime)
 
     async def addExploreTask(self):
