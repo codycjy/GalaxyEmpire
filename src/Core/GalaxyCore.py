@@ -151,6 +151,9 @@ class GalaxyCore:
             self.logger = GalaxyLogger( './logs/', 
                                        level=level,
                                        name=f'{self.username}@{self.server}')
+    def checkLogger(self):
+        if not hasattr(self, 'logger'):
+            self.setLogger(None)
 
     def startup(self):
         self.setLogger(None)
@@ -231,6 +234,7 @@ class GalaxyCore:
         """
         Login and update session
         """
+        self.checkLogger()
 
         url = f'index.php?page=gamelogin&ver=0.1&tz=7&' \
               f'device_id=51dd0b0337f00c2e03c5bb110a56f818&device_name=OPPO&' \
