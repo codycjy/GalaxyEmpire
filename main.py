@@ -83,4 +83,5 @@ if __name__ == '__main__':
     G.getTasks(attackTargetList, (ATTACKLEVEL, ATTACKTIMES, ATTACKFROM), exploreTargetList,
                (EXPLORELEVEL, EXPLORETIMES, EXPLOREFROM), task,
                fleet)
+    G.setLogger(None,10)
     G.runTask()

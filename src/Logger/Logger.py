@@ -20,6 +20,7 @@ class GalaxyLogger(logging.Logger):
             f"{datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}.log")
         fileHandler.setFormatter(formatter)
         fileHandler.setLevel(level)
+        requestLogger.addHandler(fileHandler)
         self.addHandler(fileHandler)
 
         consoleHandler=logging.StreamHandler()
