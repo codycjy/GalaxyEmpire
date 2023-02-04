@@ -24,7 +24,7 @@ class GalaxyLogger(logging.Logger):
 
         consoleHandler=logging.StreamHandler()
         consoleHandler.setFormatter(formatter)
-        consoleHandler.setLevel(max(level,logging.DEBUG))
+        consoleHandler.setLevel(max(level,logging.INFO))
         self.addHandler(consoleHandler)
 
         self.propagate = True

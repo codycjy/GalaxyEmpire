@@ -260,9 +260,10 @@ class Galaxy(GalaxyCore):
             if i not in self.planetInDanger:
                 addedPlanetInDanger.append(i)
         self.planetInDanger = newPlanetInDanger
-        self.logger.info(f"Planet no longer in danger: {planetNotInDanger}")
 
-        self.logger.info(f"Planet in danger: {addedPlanetInDanger}")
+        if planetNotInDanger or addedPlanetInDanger:
+            self.logger.info(f"Planet no longer in danger: {planetNotInDanger}")
+            self.logger.info(f"Planet in danger: {addedPlanetInDanger}")
 
 
 
