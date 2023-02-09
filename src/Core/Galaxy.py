@@ -120,7 +120,8 @@ class Galaxy(GalaxyCore):
         0:relogin 1:attack&&explore 2:escape
         3:recall 4:runFunc
         """
-
+        startTime=time.time()
+        self.logger.info(f'[{task["type"]}] | start')
         if task['type'] == 0:
             self.relogin()
             yield 0
@@ -139,6 +140,7 @@ class Galaxy(GalaxyCore):
             yield self.recallFleet(task['fleetId'])
         elif task['type'] == 4:
             yield task['func']()
+        self.logger.info(f'[{task["type"]}] | end | time:{time.time()-startTime}')
 
     def relogin(self):
         """
