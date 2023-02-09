@@ -184,7 +184,7 @@ class GalaxyCore:
         try:
             self.logger.log(5, "POST: " + url)
             req = requests.post(url, headers=headers,
-                                data=crypto(url), proxies=self.proxies)
+                                data=crypto(url),timeout=5 ,proxies=self.proxies)
             data = json.loads(req.text)
             self.logger.log(5, f"RESPONSE:  {data}")
             if data['status'] != 'error':

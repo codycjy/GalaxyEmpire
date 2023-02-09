@@ -109,7 +109,7 @@ class Galaxy(GalaxyCore):
             self.info[i]=kwargs[i]
 
     def startup(self):
-        if hasattr(self,'logger'):
+        if not hasattr(self,'logger'):
             self.setLogger(None)
         self.login()
         self.updateBuildingInfo()

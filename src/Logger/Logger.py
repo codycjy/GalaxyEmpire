@@ -17,7 +17,9 @@ class GalaxyLogger(logging.Logger):
         
         fileHandler=logging.FileHandler(
             f"{path}/{name if name!='logger'else ''} "
-            f"{datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}.log")
+            f"{datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}.log",
+            encoding='utf-8'
+        )
         fileHandler.setFormatter(formatter)
         fileHandler.setLevel(level)
         requestLogger.addHandler(fileHandler)
