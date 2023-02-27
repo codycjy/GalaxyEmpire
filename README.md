@@ -69,5 +69,7 @@ For the first time, you can set `showPlanetID` to `True` to get the planet ID.
 - [ ] Test CMD func
 - [ ] Add logger to CMD
 - [ ] Enable proxy ip to bypass 5 account limit
+- [ ] Add master Node Controller
+- [ ] Apply more node operation
 
 Welcome to contribute to this project.
