@@ -49,6 +49,7 @@ class Galaxy(GalaxyCore):
         self.planetInDanger =  []
         self._planet = {}
         self.initialized = False
+        self.task={}
         self.info = defaultdict(dict)
 
     def escapeParamsInit(self):
@@ -280,8 +281,8 @@ class Galaxy(GalaxyCore):
                 recalledFleet.append(i)
             else:
                 self.logger.info(f"Recall disabled, will not recall")
-
             noArrivingTime.append(i)
+
         for i in noArrivingTime:
             self.info['arrivingTime'].pop(i)
         # when enemy will arrive with in 60 seconds, escape
@@ -476,20 +477,20 @@ class Galaxy(GalaxyCore):
         """
         taskLst = []
         if self.isAttack:
-            attackTask = asyncio.create_task(self.addAttackTask())
-            taskLst.append(attackTask)
+            taskLst.append(self.addAttackTask())
         if self.isExplore:
-            exploreTask = asyncio.create_task(self.addExploreTask())
-            taskLst.append(exploreTask)
+            taskLst.append(self.addExploreTask())
         if self.isEscaping:
-            escapeTask = asyncio.create_task(self.Detect())
-            taskLst.append(escapeTask)
-        taskLst.append(asyncio.create_task(self.enableAutoLogin()))
+            taskLst.append(self.Detect())
+        taskLst.append(self.enableAutoLogin())
         return taskLst
 
     async def gatherTask(self):
         taskLst = self.asyncTaskGenerator()
-        await asyncio.gather(*taskLst)
+        asyncTaskList=[]
+        for task in taskLst:
+            asyncTaskList.append(asyncio.create_task(task))
+        await asyncio.gather(*asyncTaskList)
 
     def runTask(self):
         self.startup()

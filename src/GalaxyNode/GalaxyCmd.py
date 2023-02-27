@@ -85,7 +85,7 @@ class GalaxyCmd(cmd.Cmd):
     def do_show(self, line):
         result = self.gc.getAllNodesInfo()
         for i in result:
-            print(i)
+            print(i[0],i[1])
 
     def help_show(self):
         print("Show all nodes")

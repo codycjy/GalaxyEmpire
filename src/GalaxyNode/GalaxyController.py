@@ -3,6 +3,7 @@ import os
 from collections import defaultdict
 from multiprocessing import Pipe
 import logging
+import time
 
 from src.Core.GalaxyCore import GalaxyCore
 from src.GalaxyNode.GalaxyNode import GalaxyNode
@@ -10,45 +11,72 @@ from src.Logger.Logger import GalaxyLogger
 
 
 class GalaxyController:
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         self.nodes = defaultdict(dict)
+        self.nodesInfo = defaultdict(dict)
         self.conns = defaultdict(dict)
         self.cfgBackup = defaultdict(dict)
-        self.defaultFleet=GalaxyCore.fleet
-        self.loggingPath=kwargs.get("loggingPath",'./logs')
-        self.loggingLevel=kwargs.get("loggingLevel",logging.DEBUG)
+        self.defaultFleet = GalaxyCore.fleet
+        self.loggingPath:str= kwargs.get("loggingPath", './logs')
+        self.loggingLevel:int = kwargs.get("loggingLevel", logging.INFO)
+        self.controllerLogger = GalaxyLogger(self.loggingPath,
+                                             self.loggingLevel,
+                                             kwargs.get(
+                                                 "controllerName", "GalaxyController")
+                                             )
 
     def addNode(self, info, needLoginTest=True):
         conn1, conn2 = Pipe()
+        logger = GalaxyLogger(info['loggingPath'], info['loggingLevel'],
+                              f"{info['meta']['username']}@{info['meta']['server']}")
+
         node = GalaxyNode(conn2)
         node.getTaskNew(info)
-        print(info['loggingPath'],info['loggingLevel'],f"{info['meta']['username']}@{info['meta']['server']}")
-        logger=GalaxyLogger(info['loggingPath'],info['loggingLevel'],f"{info['meta']['username']}@{info['meta']['server']}")
+
         node.setLogger(logger)
-        node.fleet=self.defaultFleet
-        testLoginResult = node.testLogin()
+        node.fleet = self.defaultFleet
         server = info['meta']['server']
-        self.cfgBackup[server][info['meta']['username']] = info
+        username = info['meta']['username']
+
+        self.cfgBackup[server][username] = info
 
         if needLoginTest:
+            testLoginResult = node.testLogin()
             if testLoginResult['status']:
-                self.nodes[server][info['meta']['username']] = node
-                self.conns[server][info['meta']['username']] = conn1
-                print(f"Node {info['meta']['username']} on {server} added")
-                return {'status': True, 'msg': 'Node added successfully'}
+                self.nodes[server][username] = node
+                self.conns[server][username] = conn1
+                return {'status': True, 'msg': 'Node added'}
             else:
-                print(f"Node {info['meta']['username']} on {server} login failed: {testLoginResult['msg']}")
+                print(
+                    f"Node {username} on {server} login failed: {testLoginResult['msg']}")
                 return {'status': False, 'msg': testLoginResult['msg']}
         else:
-            print(f"Node {info['meta']['username']} on {server} added")
-            return {'status': True, 'msg': 'Node added successfully'}
+            self.nodes[server][username] = node
+            self.conns[server][username] = conn1
 
-    def getAllNodesInfo(self) -> list:
-        nodes = []
+        print(f"Node {username} on {server} added")
+        self.nodesInfo[(server, username)] = {"status": "idle"}
+        return {'status': True, 'msg': 'Node added'}
+
+    @staticmethod
+    def checkNodeStatus(node):
+        if node.pid is None:
+            return "idle"
+        else:
+            if node.is_alive():
+                return "running"
+            else:
+                return "dead"
+
+    def checkAllNodeStatus(self):
         for i in self.nodes:
             for j in self.nodes[i]:
-                nodes.append(f"Server: {i}, Username: {j}")
-        return nodes
+                self.nodesInfo[(i, j)]["status"] = self.checkNodeStatus(
+                    self.nodes[i][j])
+
+
+    def getAllNodesInfo(self) -> list:
+        return list(self.nodesInfo.items())
 
     def checkAlive(self):  # Alpha version
         for server in self.nodes.values():
@@ -64,11 +92,11 @@ class GalaxyController:
 
     def loadConfigs(self, path: str = 'NodeConfigs'):
         configs = []
-        curPath = os.getcwd()  # TODO check directory
+        curPath = os.getcwd()  # TODO: check directory
         if not os.path.exists(curPath + '/' + path):
             print('Error! Config directory not found')
             os.mkdir(curPath + '/' + path)
-            return None
+            return []
         cfgPath = curPath + f'/{path}'
         configPath = [i for i in os.listdir(cfgPath) if i.endswith('.ini')]
         if not configPath:
@@ -83,8 +111,8 @@ class GalaxyController:
                     print(e)
         return configs
 
-    def findNode(self, username, server):
-        return self.nodes.get(server).get(username, None)
+    def findNode(self, username: str, server: str):
+        return self.nodes.get(server, {}).get(username, None)
 
     def start(self):
         for i in self.nodes:
@@ -98,19 +126,53 @@ class GalaxyController:
             for j in self.nodes[i]:
                 self.nodes[i][j].terminate()
 
-    def sendMsg(self, username, server, msg):
-        self.conns[username][server].send(msg)
+    def sendMsg(self, server:str, username:str,msg:str):
+        if self.checkNodeExist(server, username):
+            self.conns[server][username].send(msg)
+        else:
+            self.controllerLogger.warning(
+                f"Node {username} on {server} not found")
 
-    def recvMsg(self, username, server):  # TODO Change it later
-        return self.conns[username][server].recv()
+    def recvMsg(self,  server:str,username:str,timeout=5):  # TODO: Change it later
+        """
+        Receive message from node
+        :param server: server name
+        :param username: username
+        :param timeout: timeout
+        :return: message
+        """
+        if not self.checkNodeExist(server,username):
+            return "Node doesn't exists"
+        now=time.time()
 
-    def autoGetNode(self, path):
+        while time.time()-now<timeout:
+            if self.conns[server][username].poll():
+                response=self.conns[server][username].recv()
+                return str(response)
+            time.sleep(0.1)
+        self.controllerLogger.info(
+            f"Node {username} on {server} has no message")
+        return "Node has no message"
+
+    def commandNode(self,server:str,username:str,command:str):
+        if not self.checkNodeExist(server,username):
+            return "Node doesn't exists!"
+        self.sendMsg(server,username,command)
+        message=self.recvMsg(server,username)
+        print("message: ",message)
+        return str(message)
+            
+
+    def autoGetNode(self, path="NodeConfigs", needLoginTest=True):
         nodeList = self.loadConfigs(path)
         if nodeList:
             for i in self.loadConfigs(path):
-                i['loggingPath']=self.loggingPath
-                i['loggingLevel']=self.loggingLevel
-                self.addNode(i)
+                i['loggingPath'] = self.loggingPath
+                i['loggingLevel'] = self.loggingLevel
+                self.addNode(i, needLoginTest=needLoginTest)
+
+    def checkNodeExist(self, server, username):
+        return username in self.nodes[server].keys()
 
     def parseConfig(self, config):  # TODO rewrite task with dict
         nodeConfig = defaultdict(dict)
@@ -169,48 +231,29 @@ class GalaxyController:
             task['target'] = [list(map(int, i.split('.'))) for i in target]
         except ValueError:
             isError = True
-            # TODO low priority add to loggers
+            # TODO: low priority add to loggers
         except Exception as e:
             print(e)
 
         try:
             times = int(data['times'])
             task['times'] = times
-        except ValueError:
-            isError = True
-            print(2333)  # TODO finish it later
-
-        try:
             startFrom = int(data['start_from'])
             task['startFrom'] = startFrom
-        except ValueError:
-            isError = True
-            print(2333)  # TODO finish it later
-
-        try:
             level = int(data['fleet'])
             task['level'] = level
         except ValueError:
             isError = True
-            print(2333)
+
 
         if isError:
-            return None
+            self.controllerLogger.error("Error in target")
+            return {}
         return task
 
     def autoLoadTask(self, path):
         for i in self.loadConfigs(path):
             self.addNode(i)
-
-    # following are test func
-
-    def test(self):
-        # let configparse parse the config file
-        for i in self.loadConfigs():
-            self.addNode(i)
-        # config = configparser.ConfigParser()
-        # config.read('./NodeConfigs/config1.ini')
-        # self.parseConfig(config)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+
+option go_package = "/;client";
+
+
+
+
+service GalaxyGrpc{
+	rpc pingNode (NodePing) returns (NodePong) {}
+	rpc getAllNodeStatus (Empty) returns (AllNodeStatus) {}
+	rpc ExcuteNodeCommand (ReqNodeCommand)returns (ResNodeCommand){}
+}
+
+
+
+
+message Empty {};
+
+message NodePing{
+	string message = 1;
+	string server = 2;
+	string username = 3;
+}
+message NodePong{
+	string message = 1;
+}
+message Node{
+	string server =1 [json_name= "server"];
+	string username= 2 [json_name="username"];
+}
+message NodeStatus{
+	Node node=1 [json_name = "node"];
+	string status = 2 [json_name = "status"];
+}
+message AllNodeStatus{
+	repeated NodeStatus node= 1;
+}
+
+message ReqNodeCommand{
+	Node node = 1 [json_name="node"];
+	string command= 2 [json_name="command"];
+};
+
+message ResNodeCommand{
+	string message = 1 [json_name="msg"];
+}
