@@ -16,8 +16,8 @@ class ScanPipeline:
 
 class DbPipeline:
     def __init__(self):
-        self.config = None
-        self.conn = pymysql.connect(host='localhost', user='galaxy', password='', db='galaxyscan', charset='utf8',
+        # self.config = None
+        self.conn = pymysql.connect(host='localhost', user='galaxy', password='', db='galaxyscan', charset='utf8mb4',
                                     database='galaxyscan')
         self.cur = self.conn.cursor()
 
@@ -42,7 +42,6 @@ class DbPipeline:
     def close_spider(self, spider):
         self.cur.close()
         self.conn.commit()
-        pass
 
     def process_item(self, item: dict, spider):
         self.cur.execute("insert into ze(name,pos,crystal,metal,has_ally,ally_name) VALUES (%s,%s,%s,%s,%s,%s)",

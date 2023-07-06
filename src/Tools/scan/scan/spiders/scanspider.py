@@ -28,9 +28,12 @@ class ScanSpider(scrapy.Spider):
         super(ScanSpider, self).__init__(**kwargs)
         self.kwargs = kwargs
         self.server = kwargs.get('server')
-        self.server_url = self.kwargs.get('server_url')
+        self.server_url:str = self.kwargs.get('server_url','')
         self.username = self.kwargs.get('username')
         self.password = self.kwargs.get('password')
+        print(kwargs)
+        if self.server_url == '':
+            raise Exception('server_url is empty')
 
     def start_requests(self):
         self.login_url = f'index.php?page=gamelogin&ver=0.1&tz=7&' \
