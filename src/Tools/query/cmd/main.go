@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func connectDB() *gorm.DB {
 	})
 	return db
 }
+
 func queryUsername(c *gin.Context){
 	planet := Planet{}
 	err:=c.BindJSON(&planet)
@@ -78,6 +80,7 @@ func queryPostion(c *gin.Context){
 	db.Table(planet.Server).Where("pos= ?", planet.Position).Find(&result)
 	c.JSON(200, result)
 }
+
 func queryAmbiguousPosition(c *gin.Context){
 	planet := Planet{}
 	err:=c.BindJSON(&planet)
@@ -91,6 +94,18 @@ func queryAmbiguousPosition(c *gin.Context){
 	result:=[]Planet{}
 	db.Table(planet.Server).Where("pos LIKE ?", planet.Position+"%").Find(&result)
 	c.JSON(200, result)
+}
+
+func queryServer(c *gin.Context){
+	db:=connectDB()
+	var tables []string
+	err := db.Raw("SHOW TABLES").Scan(&tables).Error
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{
+			"message": "Server error",
+		})
+	}
+	c.JSON(http.StatusOK, tables)
 }
 
 func main(){
@@ -108,6 +123,7 @@ func main(){
 		scan.POST("/ally", queryAlly)
 		scan.POST("/pos", queryPostion)
 		scan.POST("/pos/ambiguous", queryAmbiguousPosition)
+		scan.GET("/server", queryServer)
 	}
 	r.Run()
 
