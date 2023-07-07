@@ -1,40 +1,34 @@
-import { SearchOutlined, UploadOutlined, UserOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { SearchOutlined } from '@ant-design/icons';
 import { Layout, Menu, theme } from 'antd';
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { NavLink } from 'react-router-dom';
 
 const { Header, Content, Footer, Sider } = Layout;
+
 const App = () => {
   const {
     token: { colorBgContainer },
   } = theme.useToken();
-  const labelArray=["Query"]
+  
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <Layout style={{minHeight:"100vh"}}>
+    <Layout style={{ minHeight: "100vh" }}>
       <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
         breakpoint="lg"
         collapsedWidth="0"
-        onBreakpoint={(broken) => {
-          // console.log(broken);
-        }}
-        onCollapse={(collapsed, type) => {
-          console.log(collapsed, type);
-        }}
       >
         <div className="demo-logo-vertical" />
         
         <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
-  {[
-    { icon: SearchOutlined, label: "Query", path: "/query" },
-    // ... add more items here
-  ].map((item, index) => (
-    <Menu.Item key={String(index + 1)} icon={React.createElement(item.icon)}>
-      <NavLink to={item.path}>{item.label}</NavLink>
-    </Menu.Item>
-  ))}
-</Menu>
-
+          <Menu.Item key="1" icon={<SearchOutlined />}>
+            <NavLink to="/query">Query</NavLink>
+          </Menu.Item>
+        </Menu>
       </Sider>
       <Layout>
         <Header
@@ -69,4 +63,5 @@ const App = () => {
     </Layout>
   );
 };
+
 export default App;

@@ -1,15 +1,9 @@
-import { Table } from "antd";
-import { AudioOutlined } from "@ant-design/icons";
-import { Input, Space, Select } from "antd";
-import { useState } from "react";
+import { Table, Input, Select } from "antd";
+import { useEffect, useState } from "react";
+
 const { Search } = Input;
+
 const columns = [
-  // {
-  //   title: 'Server',
-  //   dataIndex: 'server',
-  //   onFilter: (value, record) => record.server.includes(value),
-  //   sorter: (a, b) => a.server.localeCompare(b.server),
-  // },
   {
     title: "Name",
     dataIndex: "name",
@@ -51,25 +45,34 @@ const columns = [
   },
 ];
 
-// Assuming that `data` is an array of records:
-
-const handleChange = (req) => console.log(req);
-
 const App = () => {
   const [fullData, setFullData] = useState([]);
   const [displayData, setDisplayData] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
-  const [server, setServer] = useState("ze"); // Initial server value
+  const [server, setServer] = useState("ze"); 
+  const [serverList, setServerList] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:9000/api/scan/server')
+      .then(response => response.json())
+      .then(data => {
+        const servers = data.map(server => ({ value: server, label: server }));
+        setServerList(servers);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+  }, []);
 
   const onSearch = (value) => {
-    fetch("http://localhost:5173/api/scan/user", {
+    fetch("http://localhost:9000/api/scan/user", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name: value,
-        server: server, // Use server state variable
+        server: server,
       }),
     })
       .then((response) => response.json())
@@ -77,7 +80,7 @@ const App = () => {
         const newData = data.map((item) => ({ key: item.id, ...item }));
         setFullData(newData);
         setPagination({ ...pagination, total: newData.length });
-        setDisplayData(newData.slice(0, pagination.pageSize)); // 初始化显示数据
+        setDisplayData(newData.slice(0, pagination.pageSize));
       })
       .catch((error) => {
         console.error("Error:", error);
@@ -85,14 +88,14 @@ const App = () => {
   };
 
   const handleChange = (value) => {
-    setServer(value); // Update server value when select option changes
+    setServer(value);
   };
 
   const onChange = (pagination, filters, sorter, extra) => {
     const { current, pageSize } = pagination;
     const start = (current - 1) * pageSize;
     const end = start + pageSize;
-    let processedData = [...fullData]; // Use a copy of full data to perform operations
+    let processedData = [...fullData];
     if (sorter.order) {
       processedData =
         sorter.order === "ascend"
@@ -106,22 +109,16 @@ const App = () => {
   return (
     <>
       <Select
-        defaultValue="ze"
+        defaultValue={server}
         style={{ width: 120 }}
         onChange={handleChange}
-        options={[
-          { value: "ze", label: "ze" },
-          { value: "g10", label: "g10" },
-        ]}
+        options={serverList}
       />
       <Search
         placeholder="input search text"
         onSearch={onSearch}
-        style={{
-          width: 200,
-        }}
+        style={{ width: 200 }}
       />
-
       <Table
         columns={columns}
         dataSource={displayData}
@@ -131,4 +128,5 @@ const App = () => {
     </>
   );
 };
+
 export default App;
