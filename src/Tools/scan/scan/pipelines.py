@@ -27,6 +27,7 @@ class DbPipeline:
 
     def create_table(self):
         tablename = self.config.get('server')
+        self.table = tablename
         sql = f"DROP table  IF EXISTS {tablename};"
         self.cur.execute(sql)
         sql = f"create table {tablename} (id int auto_increment primary key," \
@@ -44,7 +45,7 @@ class DbPipeline:
         self.conn.commit()
 
     def process_item(self, item: dict, spider):
-        self.cur.execute("insert into ze(name,pos,crystal,metal,has_ally,ally_name) VALUES (%s,%s,%s,%s,%s,%s)",
+        self.cur.execute(f"insert into {self.table}(name,pos,crystal,metal,has_ally,ally_name) VALUES (%s,%s,%s,%s,%s,%s)",
                          (item.get('username'),
                           item.get('position'),
                           int(item.get('derbis_crystal', 0)),
