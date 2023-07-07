@@ -21,8 +21,7 @@ def md5(parm):
 
 class ScanSpider(scrapy.Spider):
     name = 'scan'
-    server_url = "http://45.33.39.137/zadc/"
-    galaxy, system = 1, 1
+    old_server_list=["aq"]
 
     def __init__(self, **kwargs):
         super(ScanSpider, self).__init__(**kwargs)
@@ -31,7 +30,7 @@ class ScanSpider(scrapy.Spider):
         self.server_url:str = self.kwargs.get('server_url','')
         self.username = self.kwargs.get('username')
         self.password = self.kwargs.get('password')
-        print(kwargs)
+        self.logger.info(f'server:{self.server},username:{self.username},password:{self.password},server_url:{self.server_url}')
         if self.server_url == '':
             raise Exception('server_url is empty')
 
@@ -47,10 +46,17 @@ class ScanSpider(scrapy.Spider):
         ppy_id = user['ppy_id']
         ssid = user['ssid']
         self.start_urls.clear()
-        for i in range(1, 51):
-            for j in range(2 - i % 2, 151 - i % 2, 2):
-                url = self.server_url + f'game.php?page=galaxy&mode=2&galaxy={j}&system={i}'
-                self.start_urls.append(url)
+        if self.server not in self.old_server_list:
+            for i in range(1, 51):
+                for j in range(2 - i % 2, 151 - i % 2, 2):
+                    url = self.server_url + f'game.php?page=galaxy&mode=2&galaxy={j}&system={i}'
+                    self.start_urls.append(url)
+        else:
+            self.logger.warning(f'old server {self.server}')
+            for i in range(1,11):
+                for j in range(1,401):
+                    url=self.server_url+f'game.php?page=galaxy&mode=1&galaxy={i}&system={j}'
+                    self.start_urls.append(url)
 
 
         for i in self.start_urls:
@@ -59,11 +65,17 @@ class ScanSpider(scrapy.Spider):
 
     def parse_galaxy(self, response):
         data = json.loads(response.body)
+        old_flag = self.server in self.old_server_list
         if data['status'] != 'ok':
             self.logger.warning(f'{data["status"]}')
             return
-        if 'planets' in data['result'][0].keys():
-            for i in data['result'][0]['planets'].values():
+        if not old_flag:
+            data=data['result']['0']
+        else:
+            data=data['result']
+
+        if 'planets' in data.keys() and not old_flag:
+            for i in data['planets'].values():
                 planet_info = {'position': i['position'], 'name': i['name'], 'username': i['username']}
                 if i['has_derbis']:
                     planet_info['derbis_metal'] = i['derbis']['metal']
@@ -78,3 +90,24 @@ class ScanSpider(scrapy.Spider):
                     planet_info['has_ally'] = 0
                     planet_info['ally_name'] = ''
                 yield planet_info
+
+        if 'planets' in data.keys() and old_flag:
+            for j in data['planets'].items():
+                if int(j[0])>30:
+                    continue
+                i=j[1]
+                planet_info = {'position': i['position'], 'name': i['name'], 'username': i['username']}
+                if 'derbis' in i and i['derbis']:
+                    planet_info['derbis_metal'] = i['derbis']['metal'].replace(',','')
+                    planet_info['derbis_crystal'] = i['derbis']['crystal'].replace(',','')
+                else:
+                    planet_info['derbis_metal'] = 0
+                    planet_info['derbis_crystal'] = 0
+                if 'ally_name' in i and i['ally_name']:
+                    planet_info['has_ally'] = 1
+                    planet_info['ally_name'] = i['ally_name']
+                else:
+                    planet_info['has_ally'] = 0
+                    planet_info['ally_name'] = ''
+                yield planet_info
+                
