@@ -70,7 +70,7 @@ class ScanSpider(scrapy.Spider):
             self.logger.warning(f'{data["status"]}')
             return
         if not old_flag:
-            data=data['result']['0']
+            data=data['result'][0]
         else:
             data=data['result']
 
