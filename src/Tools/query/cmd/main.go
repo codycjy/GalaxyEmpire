@@ -134,7 +134,7 @@ func queryServerStatus(c *gin.Context) {
 	fmt.Println(server)
 	var serverStatus ServerStatus
 	if err := db.Table("servers_status").Where("server_name = ?", server).First(&serverStatus).Error; err != nil {
-		c.JSON(404, gin.H{"error": "Server not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Server not found"})
 		return
 	}
 	c.JSON(200, serverStatus)
