@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -95,17 +97,47 @@ func queryAmbiguousPosition(c *gin.Context){
 	db.Table(planet.Server).Where("pos LIKE ?", planet.Position+"%").Find(&result)
 	c.JSON(200, result)
 }
-
-func queryServer(c *gin.Context){
-	db:=connectDB()
+func queryServer(c *gin.Context) {
+	db := connectDB()
 	var tables []string
 	err := db.Raw("SHOW TABLES").Scan(&tables).Error
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{
 			"message": "Server error",
 		})
+		return
 	}
-	c.JSON(http.StatusOK, tables)
+
+	filteredTables := make([]string, 0)
+	excludeString := "server" // 替换为你想要剔除的特定字符
+
+	for _, table := range tables {
+		if !strings.Contains(table, excludeString) {
+			filteredTables = append(filteredTables, table)
+		}
+	}
+
+	c.JSON(http.StatusOK, filteredTables)
+}
+
+
+type ServerStatus struct {
+	ID uint `gorm:"primary_key" json:"id"`
+	ServerName string `json:"server"`
+	LastUpdated string `json:"last_modified"`
+}
+
+func queryServerStatus(c *gin.Context) {
+	db := connectDB()
+	server := c.Params.ByName("server")
+
+	fmt.Println(server)
+	var serverStatus ServerStatus
+	if err := db.Table("servers_status").Where("server_name = ?", server).First(&serverStatus).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Server not found"})
+		return
+	}
+	c.JSON(200, serverStatus)
 }
 
 func main(){
@@ -124,6 +156,7 @@ func main(){
 		scan.POST("/pos", queryPostion)
 		scan.POST("/pos/ambiguous", queryAmbiguousPosition)
 		scan.GET("/server", queryServer)
+		scan.GET("/status/:server", queryServerStatus)
 	}
 	r.Run()
 
