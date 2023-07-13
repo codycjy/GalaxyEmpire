@@ -158,6 +158,6 @@ func main(){
 		scan.GET("/server", queryServer)
 		scan.GET("/status/:server", queryServerStatus)
 	}
-	r.Run()
+	r.Run(":9001")
 
 }
