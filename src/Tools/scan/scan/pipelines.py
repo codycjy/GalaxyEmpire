@@ -45,25 +45,20 @@ class DbPipeline:
         from datetime import datetime
 
         print("close spider")
-        # 获取当前时间戳
         current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # 检查服务器是否存在
         select_query = "SELECT id FROM servers_status WHERE server_name = %s"
         self.cur.execute(select_query, (self.server,))
         result = self.cur.fetchone()
-        print(result)
 
         if result:
-            # 更新最后更新时间戳
             update_query = "UPDATE servers_status SET last_updated = %s WHERE id = %s"
             self.cur.execute(update_query, (current_timestamp, result[0]))
+            self.conn.commit()  
         else:
-            # 插入新服务器记录
             insert_query = "INSERT INTO servers_status (server_name, last_updated) VALUES (%s, %s)"
             self.cur.execute(insert_query, (self.server, current_timestamp))
             self.conn.commit()
 
-        # 关闭数据库连接和游标
         self.cur.close()
         self.conn.close()
 

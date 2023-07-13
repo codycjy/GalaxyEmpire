@@ -106,6 +106,8 @@ class ScanSpider(scrapy.Spider):
 
         if 'planets' in data.keys() and not self.old_flag:
             for i in data['planets'].values():
+                if 'position' not in i.keys():
+                    continue
                 planet_info = {'position': i['position'], 'name': i['name'], 'username': i['username']}
                 if i['has_derbis']:
                     planet_info['derbis_metal'] = i['derbis']['metal']
