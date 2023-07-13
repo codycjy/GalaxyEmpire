@@ -17,8 +17,12 @@ class ScanPipeline:
 class DbPipeline:
     def __init__(self):
         # self.config = None
-        self.conn = pymysql.connect(host='localhost', user='galaxy', password='', db='galaxyscan', charset='utf8mb4',
-                                    database='galaxyscan')
+        self.conn = pymysql.connect(host='localhost', user='galaxy', 
+                                    password='', db='galaxyscan', 
+                                    charset='utf8mb4', database='galaxyscan',
+                                    )
+        self.batch_size = 100  
+        self.batch_counter = 0
         self.cur = self.conn.cursor()
 
     def open_spider(self, spider):
@@ -72,5 +76,10 @@ class DbPipeline:
                           item.get('ally_name', ''))
                          )
 
-        self.conn.commit()
+        self.batch_counter += 1
+
+        if self.batch_counter >= self.batch_size:
+            self.conn.commit()
+            self.batch_counter = 0
+
         return item
